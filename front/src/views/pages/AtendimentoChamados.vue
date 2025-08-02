@@ -29,6 +29,9 @@ export default {
             chamados: [],
             meusChamados: [],
             novosChamados: [],
+            intervalId: null,
+            proximaAtualizacaoEm: 180,
+            cronometroId: null,
             mensagens: [],
             indicadores: [],
             carregando: true,
@@ -53,17 +56,23 @@ export default {
         };
     },
     mounted() {
-        // Busca indicadores
-        this.chamadosService.indicadoresAdmin().then((data) => {
-            this.indicadores = data.indicadores;
-        });
+        this.buscarChamados();
 
-        // Busca chamados
-        this.chamadosService.buscaChamadosAdmin().then((data) => {
-            this.novosChamados = data.novos_chamados;
-            this.meusChamados = data.meus_chamados;
-            this.carregando = false;
-        });
+        this.intervalId = setInterval(() => {
+            this.buscarChamados();
+            this.proximaAtualizacaoEm = 180;
+        }, 180000);
+
+        this.cronometroId = setInterval(() => {
+            if (this.proximaAtualizacaoEm > 0) {
+                this.proximaAtualizacaoEm--;
+            }
+        }, 1000);
+
+    },
+    beforeUnmount() {
+        clearInterval(this.intervalId);
+        clearInterval(this.cronometroId);
     },
     methods: {
         buscarChamados() {
@@ -86,6 +95,70 @@ export default {
             this.visibleChat = true;
         },
 
+
+        visualizarChat(id) {
+            this.chamadoSelecionadoId = id;
+            this.chatService.buscaChat(id).then((data) => {
+                if (data.status === 'success') {
+                    this.mensagens = data.mensagens;
+                    this.carregandoMensagens = false;
+                } else {
+                    this.mensagemFalha('Erro ao carregar o chat.');
+                }
+            });
+
+            this.visibleChat = true;
+        },
+
+        formatarTempo(segundos) {
+            const min = String(Math.floor(segundos / 60)).padStart(2, '0');
+            const sec = String(segundos % 60).padStart(2, '0');
+            return `${min}:${sec}`;
+        },
+
+        buscaMensagens() {
+            this.chatService.buscaChat(this.chamadoSelecionadoId).then((data) => {
+                if (data.status === 'success') {
+                    this.mensagens = data.mensagens;
+                    this.carregandoMensagens = false;
+                } else {
+                    this.mensagemFalha('Erro ao carregar o chat.');
+                }
+            });
+        },
+
+        onFecharChat() {
+            this.visibleChat = false;
+            this.mensagens = [];
+            this.carregandoMensagens = true;
+            this.chamadoSelecionadoId = null;
+            this.mensagemChat = '';
+        },
+
+        onDragOver() {
+            this.isDragging = true;
+        },
+        onDragLeave() {
+            this.isDragging = false;
+        },
+        onDrop(event) {
+            this.isDragging = false;
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    this.imagemSelecionada = file;
+
+                    this.chatService.enviarAnexo(file, this.chamadoSelecionadoId).then((data) => {
+                        this.buscaMensagens(this.chamadoSelecionadoId);
+                    });
+                    this.mensagemSucesso(`Imagem "${file.name}" adicionada.`);
+                } else {
+                    this.mensagemFalha('Somente arquivos de imagem são permitidos.');
+                }
+            }
+        },
+
         enviarMensagem() {
             this.erroMensagem = false;
 
@@ -94,16 +167,14 @@ export default {
                 return;
             }
 
-            // Adiciona a nova mensagem (simulação)
-            this.mensagens.push({
-                id: this.mensagens.length + 1,
-                mensagem: this.mensagemChat,
-                usuario: this.usuarioLogado,
-                usuario_id: this.usuario_id,
-                enviado_em: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            this.chatService.enviarMensagem(this.mensagemChat, this.chamadoSelecionadoId).then((data) => {
+                if (data.status === 'success') {
+                    this.mensagemChat = '';
+                    this.buscaMensagens(this.chamadoSelecionadoId);
+                } else {
+                    this.mensagemFalha('Erro ao enviar a mensagem.');
+                }
             });
-
-            this.mensagemChat = '';
         },
 
         onFecharChat() {
@@ -124,7 +195,7 @@ export default {
                 this.mensagemSucesso(`Chamado #${id} assumido com sucesso!`);
 
                 this.chamadosService.assumeChamado(chamado.id, this.usuario_id).then((data) => {
-                    // this.buscarChamados();
+                    this.buscarChamados();
                 });
             }
         },
@@ -193,30 +264,49 @@ export default {
 <template>
     <Toast />
 
-    <!-- Modal de Chat para atendimento -->
-    <Dialog @hide="onFecharChat()" v-model:visible="visibleChat" modal header="Atendimento" :style="{ width: '50rem' }" :closable="true">
+    <!-- Modal de Chat para acompanhar -->
+    <Dialog @hide="onFecharChat()" v-model:visible="visibleChat" modal header="Atendimento" :style="{ width: '50rem' }"
+        :closable="true">
+        <!-- Mensagens fixas no HTML -->
         <div class="flex flex-col gap-3 max-h-[400px] overflow-y-auto px-2 py-1">
+            <!-- Preloader enquanto carrega -->
             <template v-if="carregandoMensagens">
-                <div v-for="n in 3" :key="n" class="flex flex-col gap-2">
+                <div v-for="n in 5" :key="n" class="flex flex-col gap-2">
                     <Skeleton height="1rem" width="30%" />
                     <Skeleton height="2rem" width="100%" />
                     <Skeleton height="0.75rem" width="20%" />
                 </div>
             </template>
 
+            <!-- Mensagens reais -->
             <template v-else>
-                <div v-for="mensagem in mensagens" :key="mensagem.id" :class="['p-2 rounded-md max-w-[80%]', mensagem.usuario_id === usuario_id ? 'bg-blue-100 self-end text-right' : 'bg-gray-100 self-start text-left']">
+                <div v-for="mensagem in mensagens" :key="mensagem.id"
+                    :class="['p-2 rounded-md max-w-[80%]', mensagem.usuario_id === usuario_id ? 'bg-blue-100 self-end text-right' : 'bg-gray-100 self-start text-left']">
                     <p class="text-sm text-gray-700 mb-1">
                         <strong>{{ mensagem.usuario_id === usuario_id ? 'Você' : mensagem.usuario }}</strong>
                     </p>
-                    <p class="text-sm text-gray-600">{{ mensagem.mensagem }}</p>
+                    <!-- Aqui a condicional para mostrar imagem ou texto -->
+                    <div class="text-sm text-gray-600">
+                        <template v-if="mensagem.mensagem === 'Imagem'">
+                            <img :src="mensagem.imagem ? `http://localhost:8000/storage/${mensagem.imagem}` : mensagem.urlImagem"
+                                alt="Imagem enviada" class="max-w-xs max-h-48 rounded" />
+                        </template>
+                        <template v-else>
+                            {{ mensagem.mensagem }}
+                        </template>
+                    </div>
                     <p class="text-xs text-gray-600 mt-1">{{ mensagem.enviado_em }}</p>
                 </div>
             </template>
         </div>
 
+        <!-- Campo de envio de mensagem -->
         <div class="flex items-center gap-2 mt-4">
-            <InputText class="w-full" v-model="mensagemChat" placeholder="Digite sua mensagem" />
+            <div class="relative w-full" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave"
+                @drop.prevent="onDrop" :class="{ 'border-2 border-dashed border-blue-400': isDragging }">
+                <InputText :class="['w-full', { 'p-invalid': erroMensagem }]" v-model="mensagemChat"
+                    placeholder="Digite sua mensagem ou arraste uma imagem" :style="{ color: 'red' }" />
+            </div>
             <Button @click.prevent="enviarMensagem()" severity="success" icon="pi pi-send" />
         </div>
     </Dialog>
@@ -234,18 +324,28 @@ export default {
             <section class="mb-8">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">Olá, {{ usuarioLogado }} <span class="text-3xl">👨‍💻</span></h1>
+                        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">Olá, {{ usuarioLogado }}
+                            <span class="text-3xl">👨‍💻</span>
+                        </h1>
                         <p class="text-gray-500">Painel de gerenciamento de chamados</p>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <Button label="Atualizar" icon="pi pi-refresh" class="p-button-sm" @click="buscarChamados" />
+
+                    <div class="flex items-center gap-2 flex-col md:flex-row md:items-center md:gap-4">
+                        <p class="text-xs text-gray-800">
+                            Atualização automática em:
+                            <Tag severity="success" class="text-xs font-medium ml-2"> {{
+                                formatarTempo(proximaAtualizacaoEm)
+                            }}
+                            </Tag>
+                        </p>
                     </div>
                 </div>
             </section>
 
             <!-- Cards de Status -->
             <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div
+                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Novos Chamados</p>
@@ -260,7 +360,8 @@ export default {
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div
+                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Atribuídos a Mim</p>
@@ -275,7 +376,8 @@ export default {
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div
+                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Em Andamento</p>
@@ -290,7 +392,8 @@ export default {
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div
+                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Resolvidos</p>
@@ -315,36 +418,38 @@ export default {
                     </div>
                 </div>
 
-                <DataTable
-                    :value="novosChamados"
-                    paginator
-                    :rows="5"
-                    :rowsPerPageOptions="[5, 10]"
+                <DataTable :value="novosChamados" paginator :rows="5" :rowsPerPageOptions="[5, 10]"
                     paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
-                    responsiveLayout="scroll"
-                    class="p-datatable-sm border-none"
-                    stripedRows
-                >
-                    <Column field="id" header="#" style="width: 60px" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}" responsiveLayout="scroll"
+                    class="p-datatable-sm border-none p-6" stripedRows>
+                    <Column field="id" header="#" style="width: 60px"
+                        headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="titulo" header="Título" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="font-medium">{{ data.titulo }}</div>
-                            <div class="text-xs text-gray-500">#{{ data.id }} • {{ data.categoria }}</div>
+                            <div class="text-xs text-gray-500"># {{ data.categoria }}</div>
                         </template>
                     </Column>
-                    <Column field="solicitante" header="Solicitante" headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="prioridade" header="Prioridade" headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column field="descricao" header="Descrição"
+                        headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="solicitante" header="Solicitante"
+                        headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="prioridade" header="Prioridade"
+                        headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
-                            <Tag :value="data.prioridade" :severity="priorityColor(data.prioridade)" class="text-xs font-medium" />
+                            <Tag :value="data.prioridade" :severity="priorityColor(data.prioridade)"
+                                class="text-xs font-medium" />
                         </template>
                     </Column>
-                    <Column field="dt_abertura" header="Data Abertura" headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column header="Ações" style="width: 120px" headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column field="dt_abertura" header="Data Abertura"
+                        headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column header="Ações" style="width: 120px"
+                        headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
-                                <Button @click.prevent="visualizarChamado(data.id)" icon="pi pi-eye" class="p-button-rounded p-button-text p-button-sm text-blue-500 hover:bg-blue-50" v-tooltip.top="'Visualizar'" />
-                                <Button @click.prevent="assumirChamado(data.id)" icon="pi pi-user-plus" class="p-button-rounded p-button-text p-button-sm text-green-500 hover:bg-green-50" v-tooltip.top="'Assumir Chamado'" />
+                                <Button @click.prevent="assumirChamado(data.id)" icon="pi pi-user-plus"
+                                    class="p-button-rounded p-button-text p-button-sm text-green-500 hover:bg-green-50"
+                                    v-tooltip.top="'Assumir Chamado'" />
                             </div>
                         </template>
                     </Column>
@@ -360,56 +465,41 @@ export default {
                     </div>
                 </div>
 
-                <DataTable
-                    :value="meusChamados"
-                    paginator
-                    :rows="5"
-                    :rowsPerPageOptions="[5, 10, 20]"
+                <DataTable :value="meusChamados" paginator :rows="5" :rowsPerPageOptions="[5, 10, 20]"
                     paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
-                    responsiveLayout="scroll"
-                    class="p-datatable-sm border-none"
-                    stripedRows
-                >
-                    <Column field="id" header="#" style="width: 60px" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}" responsiveLayout="scroll"
+                    class="p-datatable-sm border-none p-6" stripedRows>
+                    <Column field="id" header="#" style="width: 60px"
+                        headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="titulo" header="Título" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="font-medium">{{ data.titulo }}</div>
-                            <div class="text-xs text-gray-500">#{{ data.id }} • {{ data.categoria }}</div>
+                            <div class="text-xs text-gray-500"># {{ data.categoria }}</div>
                         </template>
                     </Column>
-                    <Column field="solicitante" header="Solicitante" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="descricao" header="Descrição"
+                        headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="solicitante" header="Solicitante"
+                        headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="status" header="Status" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
-                            <Tag :value="data.status" :severity="statusColor(data.status)" class="text-xs font-medium" />
+                            <!-- <Tag :value="data.status" :severity="statusColor(data.status)"
+                                class="text-xs font-medium" /> -->
+                            <Dropdown v-model="data.status_id" :options="statusOptions" optionLabel="label"
+                                optionValue="value" placeholder="Status" class="w-full md:w-14rem text-xs"
+                                @change="alterarStatus(data.id, data.status_id)" />
                         </template>
+
                     </Column>
-                    <Column field="dt_abertura" header="Data Abertura" headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column header="Ações" style="width: 180px" headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column field="dt_abertura" header="Data Abertura"
+                        headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column header="Ações" style="width: 180px"
+                        headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
-                                <Button @click.prevent="visualizarChamado(data.id)" icon="pi pi-comments" class="p-button-rounded p-button-text p-button-sm text-blue-500 hover:bg-blue-50" v-tooltip.top="'Chat'" />
-                                <Button
-                                    @click.prevent="atualizarStatus(data, 'Em Andamento')"
-                                    icon="pi pi-play"
-                                    class="p-button-rounded p-button-text p-button-sm text-amber-500 hover:bg-amber-50"
-                                    v-tooltip.top="'Em Andamento'"
-                                    v-if="data.status !== 'Em Andamento'"
-                                />
-                                <Button
-                                    @click.prevent="atualizarStatus(data, 'Pendente')"
-                                    icon="pi pi-pause"
-                                    class="p-button-rounded p-button-text p-button-sm text-purple-500 hover:bg-purple-50"
-                                    v-tooltip.top="'Pendente'"
-                                    v-if="data.status !== 'Pendente'"
-                                />
-                                <Button
-                                    @click.prevent="atualizarStatus(data, 'Resolvido')"
-                                    icon="pi pi-check"
-                                    class="p-button-rounded p-button-text p-button-sm text-green-500 hover:bg-green-50"
-                                    v-tooltip.top="'Resolvido'"
-                                    v-if="data.status !== 'Resolvido'"
-                                />
+                                <Button @click.prevent="visualizarChat(data.id)" icon="pi pi-comments"
+                                    class="p-button-rounded p-button-text p-button-sm text-blue-500 hover:bg-blue-50"
+                                    v-tooltip.top="'Chat'" />
                             </div>
                         </template>
                     </Column>
@@ -420,12 +510,14 @@ export default {
 </template>
 
 <style>
-.p-datatable .p-datatable-thead > tr > th {
+.p-datatable .p-datatable-thead>tr>th {
     background-color: #f9fafb;
 }
-.p-datatable .p-datatable-tbody > tr:hover {
+
+.p-datatable .p-datatable-tbody>tr:hover {
     background-color: #f8fafc !important;
 }
+
 .p-paginator {
     border-top: 1px solid #f3f4f6 !important;
     border-radius: 0 0 12px 12px !important;
@@ -440,6 +532,7 @@ export default {
     0% {
         transform: rotate(0deg);
     }
+
     100% {
         transform: rotate(360deg);
     }
