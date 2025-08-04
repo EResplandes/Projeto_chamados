@@ -284,8 +284,8 @@ export default {
                     <div class="text-sm text-gray-600">
                         <template v-if="mensagem.mensagem === 'Imagem'">
                             <img
-                                @click="abrirImagem(mensagem.imagem ? `http://localhost:8000/storage/${mensagem.imagem}` : mensagem.urlImagem)"
-                                :src="mensagem.imagem ? `http://localhost:8000/storage/${mensagem.imagem}` : mensagem.urlImagem"
+                                @click="abrirImagem(mensagem.imagem ? `http://api-ticket/storage/${mensagem.imagem}` : mensagem.urlImagem)"
+                                :src="mensagem.imagem ? `http://api-ticket/storage/${mensagem.imagem}` : mensagem.urlImagem"
                                 alt="Imagem enviada"
                                 class="max-w-xs max-h-48 rounded"
                             />

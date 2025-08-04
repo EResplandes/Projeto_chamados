@@ -231,8 +231,7 @@ export default {
     <Toast />
 
     <!-- Modal de Chat para acompanhar -->
-    <Dialog @hide="onFecharChat()" v-model:visible="visibleChat" modal header="Atendimento" :style="{ width: '50rem' }"
-        :closable="true">
+    <Dialog @hide="onFecharChat()" v-model:visible="visibleChat" modal header="Atendimento" :style="{ width: '50rem' }" :closable="true">
         <!-- Mensagens fixas no HTML -->
         <div class="flex flex-col gap-3 max-h-[400px] overflow-y-auto px-2 py-1">
             <!-- Preloader enquanto carrega -->
@@ -246,16 +245,14 @@ export default {
 
             <!-- Mensagens reais -->
             <template v-else>
-                <div v-for="mensagem in mensagens" :key="mensagem.id"
-                    :class="['p-2 rounded-md max-w-[80%]', mensagem.usuario_id === usuario_id ? 'bg-blue-100 self-end text-right' : 'bg-gray-100 self-start text-left']">
+                <div v-for="mensagem in mensagens" :key="mensagem.id" :class="['p-2 rounded-md max-w-[80%]', mensagem.usuario_id === usuario_id ? 'bg-blue-100 self-end text-right' : 'bg-gray-100 self-start text-left']">
                     <p class="text-sm text-gray-700 mb-1">
                         <strong>{{ mensagem.usuario_id === usuario_id ? 'Você' : mensagem.usuario }}</strong>
                     </p>
                     <!-- Aqui a condicional para mostrar imagem ou texto -->
                     <div class="text-sm text-gray-600">
                         <template v-if="mensagem.mensagem === 'Imagem'">
-                            <img :src="mensagem.imagem ? `http://localhost:8000/storage/${mensagem.imagem}` : mensagem.urlImagem"
-                                alt="Imagem enviada" class="max-w-xs max-h-48 rounded" />
+                            <img :src="mensagem.imagem ? `http://api-ticket/storage/${mensagem.imagem}` : mensagem.urlImagem" alt="Imagem enviada" class="max-w-xs max-h-48 rounded" />
                         </template>
                         <template v-else>
                             {{ mensagem.mensagem }}
@@ -268,10 +265,8 @@ export default {
 
         <!-- Campo de envio de mensagem -->
         <div class="flex items-center gap-2 mt-4">
-            <div class="relative w-full" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave"
-                @drop.prevent="onDrop" :class="{ 'border-2 border-dashed border-blue-400': isDragging }">
-                <InputText :class="['w-full', { 'p-invalid': erroMensagem }]" v-model="mensagemChat"
-                    placeholder="Digite sua mensagem ou arraste uma imagem" :style="{ color: 'red' }" />
+            <div class="relative w-full" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave" @drop.prevent="onDrop" :class="{ 'border-2 border-dashed border-blue-400': isDragging }">
+                <InputText :class="['w-full', { 'p-invalid': erroMensagem }]" v-model="mensagemChat" placeholder="Digite sua mensagem ou arraste uma imagem" :style="{ color: 'red' }" />
             </div>
             <Button @click.prevent="enviarMensagem()" severity="success" icon="pi pi-send" />
         </div>
@@ -292,29 +287,23 @@ export default {
         </div>
 
         <div class="mb-4">
-            <label for="descricao" class="font-semibold block mb-1">Descrição <span
-                    class="text-red-500">*</span></label>
+            <label for="descricao" class="font-semibold block mb-1">Descrição <span class="text-red-500">*</span></label>
             <Textarea id="descricao" v-model="formChamado.descricao" class="w-full" rows="4" />
         </div>
 
         <div class="mb-4">
             <label for="urgencia" class="font-semibold block mb-1">Urgência <span class="text-red-500">*</span></label>
-            <Dropdown id="urgencia" v-model="formChamado.urgencia" :options="urgencias" optionLabel="label"
-                placeholder="Selecione a urgência" class="w-full" />
+            <Dropdown id="urgencia" v-model="formChamado.urgencia" :options="urgencias" optionLabel="label" placeholder="Selecione a urgência" class="w-full" />
         </div>
 
         <div class="mb-4">
-            <label for="categoria" class="font-semibold block mb-1">Categoria <span
-                    class="text-red-500">*</span></label>
-            <Dropdown id="categoria" v-model="formChamado.categoria" :options="categorias" optionLabel="categoria"
-                placeholder="Selecione a categoria" class="w-full" />
+            <label for="categoria" class="font-semibold block mb-1">Categoria <span class="text-red-500">*</span></label>
+            <Dropdown id="categoria" v-model="formChamado.categoria" :options="categorias" optionLabel="categoria" placeholder="Selecione a categoria" class="w-full" />
         </div>
 
         <div class="mb-4">
             <label for="anexo" class="font-semibold block mb-1">Anexo</label>
-            <FileUpload style="background-color: #004285" :key="fileKey" chooseLabel="Selecionar Arquivo"
-                @change="uploadPdf" mode="basic" type="file" ref="pdf" name="demo[]" accept=".pdf,.docx"
-                :maxFileSize="999999999"></FileUpload>
+            <FileUpload style="background-color: #004285" :key="fileKey" chooseLabel="Selecionar Arquivo" @change="uploadPdf" mode="basic" type="file" ref="pdf" name="demo[]" accept=".pdf,.docx" :maxFileSize="999999999"></FileUpload>
         </div>
 
         <template #footer>
@@ -339,19 +328,16 @@ export default {
             <section class="mb-8">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">Olá, {{ usuarioLogado }}
-                            <span class="text-3xl">👋</span></h1>
+                        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">Olá, {{ usuarioLogado }} <span class="text-3xl">👋</span></h1>
                         <p class="text-gray-500">Aqui está o resumo dos seus chamados</p>
                     </div>
-                    <Button style="background-color: #004285" @click.prevent="visible = true" label="Abrir Novo Chamado"
-                        icon="pi pi-plus" class="p-button-sm" />
+                    <Button style="background-color: #004285" @click.prevent="visible = true" label="Abrir Novo Chamado" icon="pi pi-plus" class="p-button-sm" />
                 </div>
             </section>
 
             <!-- Cards de Status -->
             <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-                <div
-                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Abertos</p>
@@ -362,14 +348,11 @@ export default {
                         </div>
                     </div>
                     <div class="mt-3 pt-3 border-t border-gray-100">
-                        <span class="text-xs text-blue-600 font-medium">Voces tem {{ this.indicadores?.chamados_abertos
-                            }}
-                            chamados abertos</span>
+                        <span class="text-xs text-blue-600 font-medium">Voces tem {{ this.indicadores?.chamados_abertos }} chamados abertos</span>
                     </div>
                 </div>
 
-                <div
-                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Em Andamento</p>
@@ -380,14 +363,11 @@ export default {
                         </div>
                     </div>
                     <div class="mt-3 pt-3 border-t border-gray-100">
-                        <span class="text-xs text-amber-600 font-medium">Vocês tem {{
-                            this.indicadores?.chamados_andamento
-                            }} chamados em andamento</span>
+                        <span class="text-xs text-amber-600 font-medium">Vocês tem {{ this.indicadores?.chamados_andamento }} chamados em andamento</span>
                     </div>
                 </div>
 
-                <div
-                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Concluídos</p>
@@ -398,14 +378,11 @@ export default {
                         </div>
                     </div>
                     <div class="mt-3 pt-3 border-t border-gray-100">
-                        <span class="text-xs text-green-600 font-medium">Vocês tem {{
-                            this.indicadores?.chamados_fechados }}
-                            chamados concluídos</span>
+                        <span class="text-xs text-green-600 font-medium">Vocês tem {{ this.indicadores?.chamados_fechados }} chamados concluídos</span>
                     </div>
                 </div>
 
-                <div
-                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Total</p>
@@ -416,9 +393,7 @@ export default {
                         </div>
                     </div>
                     <div class="mt-3 pt-3 border-t border-gray-100">
-                        <span class="text-xs text-purple-600 font-medium">Vocês tem {{ this.indicadores?.total_chamados
-                            }}
-                            chamados</span>
+                        <span class="text-xs text-purple-600 font-medium">Vocês tem {{ this.indicadores?.total_chamados }} chamados</span>
                     </div>
                 </div>
             </section>
@@ -430,43 +405,43 @@ export default {
                         <h2 class="text-lg font-semibold text-gray-800">Meus Chamados</h2>
                     </div>
                     <div class="flex items-center gap-2">
-                        <Button style="color: #004285" icon="pi pi-filter" label="Filtrar"
-                            class="p-button-text p-button-sm text-gray-600 border border-gray-200" />
+                        <Button style="color: #004285" icon="pi pi-filter" label="Filtrar" class="p-button-text p-button-sm text-gray-600 border border-gray-200" />
                     </div>
                 </div>
 
-                <DataTable :value="chamados" paginator :rows="5" :rowsPerPageOptions="[5, 10, 20]"
+                <DataTable
+                    :value="chamados"
+                    paginator
+                    :rows="5"
+                    :rowsPerPageOptions="[5, 10, 20]"
                     paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}" responsiveLayout="scroll"
-                    class="p-datatable-sm border-none" stripedRows>
-                    <Column field="id" header="#" style="width: 60px"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+                    responsiveLayout="scroll"
+                    class="p-datatable-sm border-none"
+                    stripedRows
+                >
+                    <Column field="id" header="#" style="width: 60px" headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="titulo" header="Título" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="font-medium">{{ data.titulo }}</div>
                             <div class="text-xs text-gray-500">#{{ data.id }} • {{ data.categoria }}</div>
                         </template>
                     </Column>
-                    <Column field="descricao" header="Descrição"
-                        headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column field="descricao" header="Descrição" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="font-medium">{{ data.descricao }}</div>
                         </template>
                     </Column>
                     <Column field="status" header="Status" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
-                            <Tag :value="data.status" :severity="statusColor(data.status)"
-                                class="text-xs font-medium" />
+                            <Tag :value="data.status" :severity="statusColor(data.status)" class="text-xs font-medium" />
                         </template>
                     </Column>
-                    <Column field="prioridade" header="Prioridade"
-                        headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column field="prioridade" header="Prioridade" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-2">
-                                <Tag :value="data.prioridade" :severity="priorityColor(data.prioridade)"
-                                    class="text-xs font-medium" />
-                                <i v-if="data.prioridade === 'Alta'"
-                                    class="pi pi-exclamation-circle text-red-500 text-xs" />
+                                <Tag :value="data.prioridade" :severity="priorityColor(data.prioridade)" class="text-xs font-medium" />
+                                <i v-if="data.prioridade === 'Alta'" class="pi pi-exclamation-circle text-red-500 text-xs" />
                             </div>
                         </template>
                     </Column>
@@ -475,16 +450,11 @@ export default {
                             <div class="font-medium">{{ data.tecnico }}</div>
                         </template>
                     </Column>
-                    <Column field="dt_abertura" header="Data"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column header="Ações" style="width: 100px"
-                        headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column field="dt_abertura" header="Data" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column header="Ações" style="width: 100px" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
-                                <Button @click.prevent="visualizarChat(data.id)" style="color: #004285"
-                                    icon="pi pi-comments"
-                                    class="p-button-rounded p-button-text p-button-sm text-blue-500 hover:bg-blue-50"
-                                    v-tooltip.top="'Visualizar'" />
+                                <Button @click.prevent="visualizarChat(data.id)" style="color: #004285" icon="pi pi-comments" class="p-button-rounded p-button-text p-button-sm text-blue-500 hover:bg-blue-50" v-tooltip.top="'Visualizar'" />
                             </div>
                         </template>
                     </Column>
@@ -496,11 +466,11 @@ export default {
 
 <style>
 /* Estilos personalizados */
-.p-datatable .p-datatable-thead>tr>th {
+.p-datatable .p-datatable-thead > tr > th {
     background-color: #f9fafb;
 }
 
-.p-datatable .p-datatable-tbody>tr:hover {
+.p-datatable .p-datatable-tbody > tr:hover {
     background-color: #f8fafc !important;
 }
 
