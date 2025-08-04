@@ -16,7 +16,11 @@ class ChamadosService
     {
         try {
             return [
-                'chamados' => ChamadosResource::collection(Chamados::where('solicitante_id', $id)->get()),
+                'chamados' => ChamadosResource::collection(
+                    Chamados::where('solicitante_id', $id)
+                        ->orderBy('created_at', 'desc')
+                        ->get()
+                ),
                 'status' => 'Chamado encontrado com sucesso!',
                 'http_code' => 200,
             ];
@@ -111,6 +115,7 @@ class ChamadosService
             // 7º Passo -> Retornar todos chamados do usuário
             $chamados = ChamadosResource::collection(
                 Chamados::where('solicitante_id', $request->solicitante_id)
+                    ->orderBy('created_at', 'desc')
                     ->get()
             );
 
@@ -127,11 +132,13 @@ class ChamadosService
         try {
             $novosChamados = ChamadosResource::collection(
                 Chamados::where('status_id', 1) // Chamados abertos
+                    ->orderBy('created_at', 'desc')
                     ->get()
             );
 
             $meusChamados = ChamadosResource::collection(
                 Chamados::where('tecnico_id', $id)
+                    ->orderBy('created_at', 'desc')
                     ->get()
             );
 

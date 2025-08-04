@@ -6,6 +6,7 @@ use App\Http\Controllers\AutenticacaoController;
 use App\Http\Controllers\CategoriasController;
 use App\Http\Controllers\ChamadosController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\UsuariosController;
 
 Route::prefix('autenticacao')->group(function () {
     Route::post('/login', [AutenticacaoController::class, 'login']);
@@ -30,6 +31,14 @@ Route::prefix('chamados')->group(function () {
         Route::get('/assume-chamado/{idChamado}/{idUsuario}', [ChamadosController::class, 'assumeChamado']);
         Route::get('/altera-status-chamado/{idChamado}/{idStatus}', [ChamadosController::class, 'alteraStatusChamado']);
     });
+})->middleware('auth:api');
+
+Route::prefix('usuarios')->group(function () {
+    Route::get('/busca-usuarios', [UsuariosController::class, 'buscaUsuarios']);
+    Route::post('/criar-usuario', [UsuariosController::class, 'cadastrarUsuario']);
+    Route::get('/alterar-status-usuario/{id}/{status}', [UsuariosController::class, 'alterarStatusUsuario']);
+    Route::get('/resetar-senha/{id}', [UsuariosController::class, 'resetarSenha']);
+    Route::post('/altera-senha', [UsuariosController::class, 'alteraSenha']);
 })->middleware('auth:api');
 
 Route::prefix('chat')->group(function () {
