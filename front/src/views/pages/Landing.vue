@@ -23,7 +23,8 @@ export default {
             erro: {
                 email: false,
                 senha: false,
-                login: false
+                login: false,
+                ativo: false
             },
             autenticacaoService: new AutenticacaoService()
         };
@@ -46,6 +47,11 @@ export default {
                         localStorage.setItem('token', data.token);
                         localStorage.setItem('usuario', JSON.stringify(data.user));
                         const solicitante = data.user.tipo_usuario;
+
+                        if (data.user.ativo == 0) {
+                            return (this.erro.ativo = true);
+                        }
+
                         if (solicitante != 'solicitante') {
                             this.$router.push({ name: 'atendimento-chamados' });
                         } else {
@@ -106,6 +112,9 @@ export default {
                     <Button @click.prevent="logar()" style="background-color: #004285" label="Entrar" type="submit" class="w-full mb-4 btn btn-info" severity="info" />
                     <div v-if="erro.login" class="mb-4">
                         <Message severity="error">Login ou senha incorreto(s)!</Message>
+                    </div>
+                    <div v-if="erro.ativo" class="mb-4">
+                        <Message severity="error">Usuário inativo!</Message>
                     </div>
                 </form>
             </div>

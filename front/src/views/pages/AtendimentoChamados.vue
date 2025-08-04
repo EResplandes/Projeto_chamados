@@ -43,11 +43,10 @@ export default {
             chamadoSelecionadoId: null,
             usuarioLogado: JSON.parse(localStorage.getItem('usuario'))?.name,
             statusOptions: [
-                { label: 'Novo', value: 'Novo' },
-                { label: 'Em Andamento', value: 'Em Andamento' },
-                { label: 'Pendente', value: 'Pendente' },
-                { label: 'Resolvido', value: 'Resolvido' },
-                { label: 'Fechado', value: 'Fechado' }
+                { label: 'Novo', value: 1 },
+                { label: 'Em Andamento', value: 2 },
+                { label: 'Finalizado', value: 3 },
+                { label: 'Reaberto', value: 4 }
             ],
             filtroStatus: null,
             chamadosService: new ChamadosService(),
@@ -68,7 +67,6 @@ export default {
                 this.proximaAtualizacaoEm--;
             }
         }, 1000);
-
     },
     beforeUnmount() {
         clearInterval(this.intervalId);
@@ -94,7 +92,6 @@ export default {
             this.buscarMensagens(id);
             this.visibleChat = true;
         },
-
 
         visualizarChat(id) {
             this.chamadoSelecionadoId = id;
@@ -177,14 +174,6 @@ export default {
             });
         },
 
-        onFecharChat() {
-            this.visibleChat = false;
-            this.mensagens = [];
-            this.carregandoMensagens = true;
-            this.chamadoSelecionadoId = null;
-            this.mensagemChat = '';
-        },
-
         assumirChamado(id) {
             // Simulação de assumir chamado
             const chamado = this.novosChamados.find((c) => c.id === id);
@@ -200,18 +189,27 @@ export default {
             }
         },
 
-        atualizarStatus(chamado, novoStatus) {
-            // Simulação de atualização de status
-            chamado.status = novoStatus;
-            this.mensagemSucesso(`Status do chamado #${chamado.id} atualizado para ${novoStatus}`);
-        },
-
         mensagemSucesso(mensagem) {
             this.toast.add({ severity: 'success', summary: 'Sucesso', detail: mensagem, life: 3000 });
         },
 
         mensagemFalha(mensagem) {
             this.toast.add({ severity: 'error', summary: 'Erro', detail: mensagem, life: 3000 });
+        },
+
+        alterarStatus(chamado_id, status_id) {
+            this.chamadosService.alterarStatusChamado(chamado_id, status_id).then((data) => {
+                if (data.status === 'Status do chamado alterado com sucesso!') {
+                    this.buscarChamados();
+                    this.mensagemSucesso('Status atualizado com sucesso!');
+                } else {
+                    this.mensagemFalha('Erro ao atualizar o status do chamado.');
+                }
+            });
+        },
+
+        abrirImagem(url) {
+            window.open(url, '_blank');
         }
     },
     computed: {
@@ -226,15 +224,14 @@ export default {
                 case 'Novo':
                     return 'info';
                 case 'Em andamento':
-                    return 'warning';
+                    return 'warn';
                 case 'Resolvido':
                     return 'success';
-                case 'Fechado':
+                case 'Finalizado':
                     return 'success';
-                case 'Pendente':
-                    return 'danger';
+                case 'Reaberto':
+                    return 'info';
                 default:
-                    return 'secondary';
             }
         };
 
@@ -243,11 +240,11 @@ export default {
                 case 'Alta':
                     return 'danger';
                 case 'Média':
-                    return 'warning';
+                    return 'warn';
                 case 'Baixa':
                     return 'info';
-                case 'Crítica':
-                    return 'danger';
+                case 'Critíco':
+                    return 'contrast';
                 default:
                     return 'info';
             }
@@ -265,8 +262,7 @@ export default {
     <Toast />
 
     <!-- Modal de Chat para acompanhar -->
-    <Dialog @hide="onFecharChat()" v-model:visible="visibleChat" modal header="Atendimento" :style="{ width: '50rem' }"
-        :closable="true">
+    <Dialog @hide="onFecharChat()" v-model:visible="visibleChat" modal header="Atendimento" :style="{ width: '50rem' }" :closable="true">
         <!-- Mensagens fixas no HTML -->
         <div class="flex flex-col gap-3 max-h-[400px] overflow-y-auto px-2 py-1">
             <!-- Preloader enquanto carrega -->
@@ -280,17 +276,21 @@ export default {
 
             <!-- Mensagens reais -->
             <template v-else>
-                <div v-for="mensagem in mensagens" :key="mensagem.id"
-                    :class="['p-2 rounded-md max-w-[80%]', mensagem.usuario_id === usuario_id ? 'bg-blue-100 self-end text-right' : 'bg-gray-100 self-start text-left']">
+                <div v-for="mensagem in mensagens" :key="mensagem.id" :class="['p-2 rounded-md max-w-[80%]', mensagem.usuario_id === usuario_id ? 'bg-blue-100 self-end text-right' : 'bg-gray-100 self-start text-left']">
                     <p class="text-sm text-gray-700 mb-1">
                         <strong>{{ mensagem.usuario_id === usuario_id ? 'Você' : mensagem.usuario }}</strong>
                     </p>
                     <!-- Aqui a condicional para mostrar imagem ou texto -->
                     <div class="text-sm text-gray-600">
                         <template v-if="mensagem.mensagem === 'Imagem'">
-                            <img :src="mensagem.imagem ? `http://localhost:8000/storage/${mensagem.imagem}` : mensagem.urlImagem"
-                                alt="Imagem enviada" class="max-w-xs max-h-48 rounded" />
+                            <img
+                                @click="abrirImagem(mensagem.imagem ? `http://localhost:8000/storage/${mensagem.imagem}` : mensagem.urlImagem)"
+                                :src="mensagem.imagem ? `http://localhost:8000/storage/${mensagem.imagem}` : mensagem.urlImagem"
+                                alt="Imagem enviada"
+                                class="max-w-xs max-h-48 rounded"
+                            />
                         </template>
+
                         <template v-else>
                             {{ mensagem.mensagem }}
                         </template>
@@ -302,10 +302,8 @@ export default {
 
         <!-- Campo de envio de mensagem -->
         <div class="flex items-center gap-2 mt-4">
-            <div class="relative w-full" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave"
-                @drop.prevent="onDrop" :class="{ 'border-2 border-dashed border-blue-400': isDragging }">
-                <InputText :class="['w-full', { 'p-invalid': erroMensagem }]" v-model="mensagemChat"
-                    placeholder="Digite sua mensagem ou arraste uma imagem" :style="{ color: 'red' }" />
+            <div class="relative w-full" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave" @drop.prevent="onDrop" :class="{ 'border-2 border-dashed border-blue-400': isDragging }">
+                <InputText :class="['w-full', { 'p-invalid': erroMensagem }]" v-model="mensagemChat" placeholder="Digite sua mensagem ou arraste uma imagem" :style="{ color: 'red' }" />
             </div>
             <Button @click.prevent="enviarMensagem()" severity="success" icon="pi pi-send" />
         </div>
@@ -324,7 +322,8 @@ export default {
             <section class="mb-8">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">Olá, {{ usuarioLogado }}
+                        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                            Olá, {{ usuarioLogado }}
                             <span class="text-3xl">👨‍💻</span>
                         </h1>
                         <p class="text-gray-500">Painel de gerenciamento de chamados</p>
@@ -333,10 +332,7 @@ export default {
                     <div class="flex items-center gap-2 flex-col md:flex-row md:items-center md:gap-4">
                         <p class="text-xs text-gray-800">
                             Atualização automática em:
-                            <Tag severity="success" class="text-xs font-medium ml-2"> {{
-                                formatarTempo(proximaAtualizacaoEm)
-                            }}
-                            </Tag>
+                            <Tag severity="success" class="text-xs font-medium ml-2"> {{ formatarTempo(proximaAtualizacaoEm) }} </Tag>
                         </p>
                     </div>
                 </div>
@@ -344,8 +340,7 @@ export default {
 
             <!-- Cards de Status -->
             <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-                <div
-                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Novos Chamados</p>
@@ -360,8 +355,7 @@ export default {
                     </div>
                 </div>
 
-                <div
-                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Atribuídos a Mim</p>
@@ -376,8 +370,7 @@ export default {
                     </div>
                 </div>
 
-                <div
-                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Em Andamento</p>
@@ -392,8 +385,7 @@ export default {
                     </div>
                 </div>
 
-                <div
-                    class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
+                <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 mb-1">Resolvidos</p>
@@ -418,38 +410,36 @@ export default {
                     </div>
                 </div>
 
-                <DataTable :value="novosChamados" paginator :rows="5" :rowsPerPageOptions="[5, 10]"
+                <DataTable
+                    :value="novosChamados"
+                    paginator
+                    :rows="5"
+                    :rowsPerPageOptions="[5, 10]"
                     paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}" responsiveLayout="scroll"
-                    class="p-datatable-sm border-none p-6" stripedRows>
-                    <Column field="id" header="#" style="width: 60px"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+                    responsiveLayout="scroll"
+                    class="p-datatable-sm border-none p-6"
+                    stripedRows
+                >
+                    <Column field="id" header="#" style="width: 60px" headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="titulo" header="Título" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="font-medium">{{ data.titulo }}</div>
                             <div class="text-xs text-gray-500"># {{ data.categoria }}</div>
                         </template>
                     </Column>
-                    <Column field="descricao" header="Descrição"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="solicitante" header="Solicitante"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="prioridade" header="Prioridade"
-                        headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column field="descricao" header="Descrição" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="solicitante" header="Solicitante" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="prioridade" header="Prioridade" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
-                            <Tag :value="data.prioridade" :severity="priorityColor(data.prioridade)"
-                                class="text-xs font-medium" />
+                            <Tag :value="data.prioridade" :severity="priorityColor(data.prioridade)" class="text-xs font-medium" />
                         </template>
                     </Column>
-                    <Column field="dt_abertura" header="Data Abertura"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column header="Ações" style="width: 120px"
-                        headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column field="dt_abertura" header="Data Abertura" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column header="Ações" style="width: 120px" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
-                                <Button @click.prevent="assumirChamado(data.id)" icon="pi pi-user-plus"
-                                    class="p-button-rounded p-button-text p-button-sm text-green-500 hover:bg-green-50"
-                                    v-tooltip.top="'Assumir Chamado'" />
+                                <Button @click.prevent="assumirChamado(data.id)" icon="pi pi-user-plus" class="p-button-rounded p-button-text p-button-sm text-green-500 hover:bg-green-50" v-tooltip.top="'Assumir Chamado'" />
                             </div>
                         </template>
                     </Column>
@@ -465,41 +455,43 @@ export default {
                     </div>
                 </div>
 
-                <DataTable :value="meusChamados" paginator :rows="5" :rowsPerPageOptions="[5, 10, 20]"
+                <DataTable
+                    :value="meusChamados"
+                    paginator
+                    :rows="5"
+                    :rowsPerPageOptions="[5, 10, 20]"
                     paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}" responsiveLayout="scroll"
-                    class="p-datatable-sm border-none p-6" stripedRows>
-                    <Column field="id" header="#" style="width: 60px"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
+                    responsiveLayout="scroll"
+                    class="p-datatable-sm border-none p-6"
+                    stripedRows
+                >
+                    <Column field="id" header="#" style="width: 60px" headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="titulo" header="Título" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="font-medium">{{ data.titulo }}</div>
                             <div class="text-xs text-gray-500"># {{ data.categoria }}</div>
                         </template>
                     </Column>
-                    <Column field="descricao" header="Descrição"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="solicitante" header="Solicitante"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="descricao" header="Descrição" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="solicitante" header="Solicitante" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="status" header="Status" headerClass="font-medium text-gray-600 text-xs uppercase">
+                        <template #body="{ data }">
+                            <Tag :value="data.status" :severity="statusColor(data.status)" class="text-xs font-medium" />
+                        </template>
+                    </Column>
+                    <Column field="dt_abertura" header="Data Abertura" headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="status" header="Status" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <!-- <Tag :value="data.status" :severity="statusColor(data.status)"
                                 class="text-xs font-medium" /> -->
-                            <Dropdown v-model="data.status_id" :options="statusOptions" optionLabel="label"
-                                optionValue="value" placeholder="Status" class="w-full md:w-14rem text-xs"
-                                @change="alterarStatus(data.id, data.status_id)" />
+                            <Dropdown v-model="data.status_id" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full md:w-14rem text-xs" @change="alterarStatus(data.id, data.status_id)" />
                         </template>
-
                     </Column>
-                    <Column field="dt_abertura" header="Data Abertura"
-                        headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column header="Ações" style="width: 180px"
-                        headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column header="Ações" style="width: 180px" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
-                                <Button @click.prevent="visualizarChat(data.id)" icon="pi pi-comments"
-                                    class="p-button-rounded p-button-text p-button-sm text-blue-500 hover:bg-blue-50"
-                                    v-tooltip.top="'Chat'" />
+                                <Button @click.prevent="visualizarChat(data.id)" icon="pi pi-comments" class="p-button-rounded p-button-text p-button-sm text-blue-500 hover:bg-blue-50" v-tooltip.top="'Chat'" />
                             </div>
                         </template>
                     </Column>
@@ -510,11 +502,11 @@ export default {
 </template>
 
 <style>
-.p-datatable .p-datatable-thead>tr>th {
+.p-datatable .p-datatable-thead > tr > th {
     background-color: #f9fafb;
 }
 
-.p-datatable .p-datatable-tbody>tr:hover {
+.p-datatable .p-datatable-tbody > tr:hover {
     background-color: #f8fafc !important;
 }
 
