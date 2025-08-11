@@ -158,4 +158,22 @@ export default class ChamadosService {
                 throw error;
             });
     }
+
+    async buscaAnexo(id) {
+        return await fetch(`${API_URL}/chamados/admin/busca-anexo/${id}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            }
+        })
+            .then((res) => res.json())
+            .then((d) => {
+                return d;
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                throw error;
+            });
+    }
 }

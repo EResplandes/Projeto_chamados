@@ -43,7 +43,7 @@ export default {
             chamadoSelecionadoId: null,
             usuarioLogado: JSON.parse(localStorage.getItem('usuario'))?.name,
             statusOptions: [
-                { label: 'Eduardi', value: 1 },
+                { label: 'Novo', value: 1 },
                 { label: 'Em Andamento', value: 2 },
                 { label: 'Finalizado', value: 3 },
                 { label: 'Reaberto', value: 4 }
@@ -229,6 +229,12 @@ export default {
 
         abrirImagem(url) {
             window.open(url, '_blank');
+        },
+
+        visualizarAnexo(anexo) {
+            this.chamadosService.buscaAnexo(anexo.id).then((data) => {
+                window.open('http://api-ticket.gruporialma.com.br/storage/' + data.url, '_blank');
+            });
         }
     },
     computed: {
@@ -469,7 +475,7 @@ export default {
                     <Column header="Ações" style="width: 120px" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
-                                <Button @click.prevent="assumirChamado(data.id)" icon="pi pi-user-plus" class="p-button-rounded p-button-text p-button-sm text-green-500 hover:bg-green-50" v-tooltip.top="'Assumir Chamado'" />
+                                <Button @click.prevent="assumirChamado(data.id)" icon="pi pi-user-plus" class="text-green-500 hover:bg-green-50" v-tooltip.top="'Assumir Chamado'" />
                             </div>
                         </template>
                     </Column>
@@ -521,7 +527,8 @@ export default {
                     <Column header="Ações" style="width: 180px" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
-                                <Button @click.prevent="visualizarChat(data.id)" icon="pi pi-comments" class="p-button-rounded p-button-text p-button-sm text-blue-500 hover:bg-blue-50" v-tooltip.top="'Chat'" />
+                                <Button @click.prevent="visualizarChat(data.id)" icon="pi pi-comments" class="p-button-sm hover:bg-blue-50" v-tooltip.top="'Chat'" />
+                                <Button @click.prevent="visualizarAnexo(data)" icon="pi pi-file" class="p-button-sm p-button-info hover:bg-blue-50" v-tooltip.top="'Chat'" />
                             </div>
                         </template>
                     </Column>
