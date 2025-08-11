@@ -233,7 +233,8 @@ export default {
 
         visualizarAnexo(anexo) {
             this.chamadosService.buscaAnexo(anexo.id).then((data) => {
-                window.open('http://api-ticket.gruporialma.com.br/storage/' + data.url, '_blank');
+                console.log(data);
+                window.open('http://api-ticket.gruporialma.com.br/storage/' + data.anexos[0].caminho, '_blank');
             });
         }
     },
