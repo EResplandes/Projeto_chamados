@@ -140,4 +140,22 @@ export default class ChamadosService {
                 throw error;
             });
     }
+
+    async alterarTecnicoChamado(id, idStatus) {
+        return await fetch(`${API_URL}/chamados/admin/altera-tecnico-chamado/${id}/${idStatus}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            }
+        })
+            .then((res) => res.json())
+            .then((d) => {
+                return d;
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                throw error;
+            });
+    }
 }

@@ -43,10 +43,18 @@ export default {
             chamadoSelecionadoId: null,
             usuarioLogado: JSON.parse(localStorage.getItem('usuario'))?.name,
             statusOptions: [
-                { label: 'Novo', value: 1 },
+                { label: 'Eduardi', value: 1 },
                 { label: 'Em Andamento', value: 2 },
                 { label: 'Finalizado', value: 3 },
                 { label: 'Reaberto', value: 4 }
+            ],
+            tecnicosOptions: [
+                { label: 'Daniel Silva', value: 4 },
+                { label: 'Gilberto Mendes', value: 5 },
+                { label: 'Danilo Ornelas', value: 2 },
+                { label: 'Eduardo Resplandes', value: 1 },
+                { label: 'Fred Moreno', value: 3 },
+                { label: 'Kaylane Nayane', value: 6 }
             ],
             filtroStatus: null,
             chamadosService: new ChamadosService(),
@@ -180,7 +188,7 @@ export default {
             if (chamado) {
                 chamado.status = 'Em andamento';
                 this.meusChamados.push(chamado);
-                this.novosChamados = this.novosChamados.filter((c) => c.id !== id);
+                // this.novosChamados = this.novosChamados.filter((c) => c.id !== id);
                 this.mensagemSucesso(`Chamado #${id} assumido com sucesso!`);
 
                 this.chamadosService.assumeChamado(chamado.id, this.usuario_id).then((data) => {
@@ -202,6 +210,17 @@ export default {
                 if (data.status === 'Status do chamado alterado com sucesso!') {
                     this.buscarChamados();
                     this.mensagemSucesso('Status atualizado com sucesso!');
+                } else {
+                    this.mensagemFalha('Erro ao atualizar o status do chamado.');
+                }
+            });
+        },
+
+        alterarTecnico(chamado_id, tecnico_id) {
+            this.chamadosService.alterarTecnicoChamado(chamado_id, tecnico_id).then((data) => {
+                if (data.status === 'Tecnico do chamado alterado com sucesso!') {
+                    this.buscarChamados();
+                    this.mensagemSucesso('Tecnico atualizado com sucesso!');
                 } else {
                     this.mensagemFalha('Erro ao atualizar o status do chamado.');
                 }
@@ -430,12 +449,23 @@ export default {
                     </Column>
                     <Column field="descricao" header="Descrição" headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="solicitante" header="Solicitante" headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="prioridade" header="Prioridade" headerClass="font-medium text-gray-600 text-xs uppercase">
+                    <Column field="tecnico" header="Tecnico" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="status" header="Status" headerClass="font-medium text-gray-600 text-xs uppercase">
+                        <template #body="{ data }">
+                            <Tag :value="data.status" :severity="statusColor(data.status)" class="text-xs font-medium" />
+                        </template>
+                    </Column>
+                    <!-- <Column field="prioridade" header="Prioridade" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <Tag :value="data.prioridade" :severity="priorityColor(data.prioridade)" class="text-xs font-medium" />
                         </template>
-                    </Column>
+                    </Column> -->
                     <Column field="dt_abertura" header="Data Abertura" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="tecnico" header="Associar Tecnico" headerClass="font-medium text-gray-600 text-xs uppercase">
+                        <template #body="{ data }">
+                            <Dropdown v-model="data.status_id" :options="tecnicosOptions" optionLabel="label" optionValue="value" placeholder="Tecnico" class="w-full md:w-14rem text-xs" @change="alterarTecnico(data.id, data.status_id)" />
+                        </template>
+                    </Column>
                     <Column header="Ações" style="width: 120px" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
