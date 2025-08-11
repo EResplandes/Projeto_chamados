@@ -247,7 +247,8 @@ class ChamadosService
     public function buscaAnexo($idChamados)
     {
         try {
-            $anexos = Anexos::where('chamado_id', $idChamados)->get();
+            $anexos = Anexos::where('chamado_id', $idChamados)->pluck('caminho')->first();
+
             return [
                 'anexos' => $anexos,
                 'status' => 'Anexos encontrados com sucesso!',

@@ -3,7 +3,12 @@
 namespace App\Services;
 
 use App\Models\Chat;
+use App\Models\User;
 use App\Http\Resources\ChatResource;
+use App\Models\Chamados;
+use App\Mail\Mensagem;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class ChatService
 {
@@ -41,14 +46,33 @@ class ChatService
                 'enviado_em' => now(),
             ]);
 
+            $recuperandoSolicitanteId = Chamados::where('id', $request->chamado_id)->pluck('solicitante_id')->first();
+
+            $tituloChamado = Chamados::where('id', $request->chamado_id)->pluck('titulo')->first();
+
+            $solicitante = User::where('id', $recuperandoSolicitanteId)->first();
+
+            $dados = [
+                'nome' => $solicitante->name,
+                'mensagem' => $request->mensagem,
+                'titulo' => $tituloChamado
+            ];
+
+            Mail::to($solicitante->email)->send(new Mensagem($dados));
+
+            \Log::info('Notificação enviada para ' . $solicitante->email);
+
+            logger('Notificação enviada para ' . $solicitante->email);
+
             return [
                 'mensagem' => $chat,
                 'status' => 'success',
                 'http_code' => 201
             ];
         } catch (\Exception $e) {
+            dd($e);
             return [
-                'status' => 'error',
+                'status' => $e,
                 'http_code' => 500,
             ];
         }
