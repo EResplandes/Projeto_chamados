@@ -27,6 +27,7 @@ Route::prefix('chamados')->group(function () {
 
     Route::prefix('admin')->group(function () {
         Route::get('/busca-chamados/{id}', [ChamadosController::class, 'buscarChamadosAdmin']);
+        Route::get('/busca-anexo/{id}', [ChamadosController::class, 'buscaAnexo']);
         Route::get('indicadores-admin/{id}', [ChamadosController::class, 'indicadoresAdmin']);
         Route::get('/assume-chamado/{idChamado}/{idUsuario}', [ChamadosController::class, 'assumeChamado']);
         Route::get('/altera-status-chamado/{idChamado}/{idStatus}', [ChamadosController::class, 'alteraStatusChamado']);

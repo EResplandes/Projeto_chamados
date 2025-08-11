@@ -243,4 +243,21 @@ class ChamadosService
             ], 500);
         }
     }
+
+    public function buscaAnexo($idChamados)
+    {
+        try {
+            $anexos = Anexos::where('chamado_id', $idChamados)->get();
+            return [
+                'anexos' => $anexos,
+                'status' => 'Anexos encontrados com sucesso!',
+                'http_code' => 200,
+            ];
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'Erro ao buscar anexos: ' . $e->getMessage(),
+                'http_code' => 500,
+            ], 500);
+        }
+    }
 }

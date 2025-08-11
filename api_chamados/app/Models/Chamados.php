@@ -43,4 +43,9 @@ class Chamados extends Model
     {
         return $this->belongsTo(Status::class, 'status_id');
     }
+
+    public function anexo()
+    {
+        return $this->belongsTo(Anexo::class, 'anexo_id');
+    }
 }

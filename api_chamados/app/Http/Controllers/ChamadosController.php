@@ -85,4 +85,13 @@ class ChamadosController extends Controller
             'status' => $response['status'],
         ], $response['http_code'] ?? 500);
     }
+
+    public function buscaAnexo($idChamado)
+    {
+        $anexos = $this->chamadosService->buscaAnexo($idChamado);
+        return response()->json([
+            'anexos' => $anexos['anexos'],
+            'status' => $anexos['status'],
+        ], $anexos['http_code'] ?? 500);
+    }
 }
