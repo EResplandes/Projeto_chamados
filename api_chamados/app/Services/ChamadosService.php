@@ -131,7 +131,7 @@ class ChamadosService
     {
         try {
             $novosChamados = ChamadosResource::collection(
-                Chamados::orderBy('created_at', 'desc')
+                Chamados::where('status_id', '!=', '3')->orderBy('created_at', 'desc')
                     ->get()
             );
 
