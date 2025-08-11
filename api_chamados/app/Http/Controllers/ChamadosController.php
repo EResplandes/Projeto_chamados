@@ -77,4 +77,12 @@ class ChamadosController extends Controller
             'status' => $response['status'],
         ], $response['http_code'] ?? 500);
     }
+
+    public function alteraTecnicoChamado($idChamado, $idTecnico)
+    {
+        $response = $this->chamadosService->alteraTecnicoChamado($idChamado, $idTecnico);
+        return response()->json([
+            'status' => $response['status'],
+        ], $response['http_code'] ?? 500);
+    }
 }

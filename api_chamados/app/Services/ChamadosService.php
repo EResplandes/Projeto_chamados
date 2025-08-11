@@ -131,8 +131,7 @@ class ChamadosService
     {
         try {
             $novosChamados = ChamadosResource::collection(
-                Chamados::where('status_id', 1) // Chamados abertos
-                    ->orderBy('created_at', 'desc')
+                Chamados::orderBy('created_at', 'desc')
                     ->get()
             );
 
@@ -221,6 +220,25 @@ class ChamadosService
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'Erro ao alterar status do chamado: ' . $e->getMessage(),
+                'http_code' => 500,
+            ], 500);
+        }
+    }
+
+    public function alteraTecnicoChamado($idChamado, $idTecnico)
+    {
+        try {
+            $chamado = Chamados::findOrFail($idChamado);
+            $chamado->tecnico_id = $idTecnico;
+            $chamado->save();
+
+            return [
+                'status' => 'Tecnico do chamado alterado com sucesso!',
+                'http_code' => 200,
+            ];
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'Erro ao alterar tecnico do chamado: ' . $e->getMessage(),
                 'http_code' => 500,
             ], 500);
         }

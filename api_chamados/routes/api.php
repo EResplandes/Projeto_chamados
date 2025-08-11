@@ -30,6 +30,7 @@ Route::prefix('chamados')->group(function () {
         Route::get('indicadores-admin/{id}', [ChamadosController::class, 'indicadoresAdmin']);
         Route::get('/assume-chamado/{idChamado}/{idUsuario}', [ChamadosController::class, 'assumeChamado']);
         Route::get('/altera-status-chamado/{idChamado}/{idStatus}', [ChamadosController::class, 'alteraStatusChamado']);
+        Route::get('/altera-tecnico-chamado/{idChamado}/{idTecnico}', [ChamadosController::class, 'alteraTecnicoChamado']);
     });
 })->middleware('auth:api');
 
