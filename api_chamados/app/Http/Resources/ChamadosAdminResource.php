@@ -34,7 +34,8 @@ class ChamadosAdminResource extends JsonResource
         ];
     }
 
-
+/*************  ✨ Windsurf Command ⭐  *************/
+/*******  479e6eed-dd3b-493a-a6f6-9f9979c0d901  *******/
     private function formatarData($data)
     {
         return $data ? $data->format('d/m/Y H:i:s') : null;
