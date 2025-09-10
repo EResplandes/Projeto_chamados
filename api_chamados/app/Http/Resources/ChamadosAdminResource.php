@@ -2,11 +2,11 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Chat;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Models\Chat;
 
-class ChamadosResource extends JsonResource
+class ChamadosAdminResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -24,7 +24,7 @@ class ChamadosResource extends JsonResource
             'categoria' => $this->categoria->categoria,
             'solicitante' => $this->solicitante->name,
             'tecnico' => $this->tecnico->name ?? 'Não designado',
-            'tecnico_secundario' => $this->tecnico_secundario->name ?? 'Não designado',
+            'tecnico_secundario' => $this->tecnico_secundario->name ?? null,
             'prioridade' => $this->prioridade,
             'dt_abertura' => $this->formatarData($this->created_at),
             'dt_fechamento' => $this->formatarData($this->dt_fechamento),
@@ -33,6 +33,7 @@ class ChamadosResource extends JsonResource
             'anexo' => $this->anexos ?? null,
         ];
     }
+
 
     private function formatarData($data)
     {
@@ -43,8 +44,8 @@ class ChamadosResource extends JsonResource
     {
         return Chat::query()
             ->where('chamado_id', $this->id)
+            ->where('usuario_id', '!=', $this->tecnico_id)
             ->where('lida', false)
-            ->where('usuario_id', $this->solicitante_id)
             ->count();
     }
 }

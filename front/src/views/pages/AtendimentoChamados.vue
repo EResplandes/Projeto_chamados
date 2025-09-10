@@ -7,11 +7,10 @@ import Tag from 'primevue/tag';
 import Dialog from 'primevue/dialog';
 import MenuSuperior from '@/components/MenuSuperior.vue';
 import ChamadosService from '../../service/ChamadosService';
-// import CategoriasService from '@/service/CategoriasService';
 import ChatService from '@/service/ChatService';
 import { useToast } from 'primevue';
 import Skeleton from 'primevue/skeleton';
-import Dropdown from 'primevue/dropdown';
+import InputText from 'primevue/inputtext';
 
 export default {
     name: 'ChamadosTecnico',
@@ -21,8 +20,9 @@ export default {
         Column,
         Tag,
         Dialog,
+        Skeleton,
         MenuSuperior,
-        Dropdown
+        InputText
     },
     data() {
         return {
@@ -30,12 +30,14 @@ export default {
             meusChamados: [],
             novosChamados: [],
             intervalId: null,
+            chatIntervalId: null,
             proximaAtualizacaoEm: 180,
             cronometroId: null,
             mensagens: [],
             indicadores: [],
             carregando: true,
             visibleChat: false,
+            enviandoMensagemBotao: false,
             carregandoMensagens: true,
             usuario_id: JSON.parse(localStorage.getItem('usuario'))?.id,
             mensagemChat: null,
@@ -59,10 +61,12 @@ export default {
             filtroStatus: null,
             chamadosService: new ChamadosService(),
             chatService: new ChatService(),
-            toast: useToast()
+            toast: useToast(),
+            isDragging: false
         };
     },
     mounted() {
+        this.chatIntervalId = null;
         this.buscarChamados();
 
         this.intervalId = setInterval(() => {
@@ -79,67 +83,98 @@ export default {
     beforeUnmount() {
         clearInterval(this.intervalId);
         clearInterval(this.cronometroId);
+        if (this.socket) {
+            this.socket.disconnect();
+        }
     },
     methods: {
         buscarChamados() {
-            // Busca indicadores
             this.chamadosService.indicadoresAdmin().then((data) => {
                 this.indicadores = data.indicadores;
             });
-
-            // Busca chamados
             this.chamadosService.buscaChamadosAdmin().then((data) => {
-                this.novosChamados = data.novos_chamados;
-                this.meusChamados = data.meus_chamados;
+                this.novosChamados = data.novos_chamados.sort((a, b) => {
+                    const ordem = {
+                        Novo: 1,
+                        'Em andamento': 2
+                    };
+
+                    return ordem[a.status] - ordem[b.status];
+                });
+
+                this.meusChamados = data.meus_chamados.sort((a, b) => {
+                    const ordem = {
+                        Novo: 1,
+                        'Em andamento': 2,
+                        Finalizado: 3
+                    };
+
+                    return ordem[a.status] - ordem[b.status];
+                });
+                console.log(this.meusChamados);
                 this.carregando = false;
             });
         },
-
         visualizarChamado(id) {
             this.chamadoSelecionadoId = id;
             this.buscarMensagens(id);
             this.visibleChat = true;
         },
-
-        visualizarChat(id) {
-            this.chamadoSelecionadoId = id;
-            this.chatService.buscaChat(id).then((data) => {
+        marcaMensagensComoLidas(id) {
+            this.chatService.marcaMensagensComoLidas(id).then((data) => {
                 if (data.status === 'success') {
-                    this.mensagens = data.mensagens;
+                    this.buscarChamados();
+                } else {
+                    this.mensagemFalha('Erro ao marcar mensagens como lidas.');
+                }
+            });
+        },
+        buscarChat() {
+            this.chatService.buscaChat(this.chamadoSelecionadoId).then((data) => {
+                if (data.status === 'success') {
                     this.carregandoMensagens = false;
+                    this.mensagens = data.mensagens;
+                    this.scrollParaUltimaMensagem();
                 } else {
                     this.mensagemFalha('Erro ao carregar o chat.');
                 }
             });
-
-            this.visibleChat = true;
         },
+        visualizarChat(id) {
+            this.onFecharChat();
+            this.marcaMensagensComoLidas(id);
+            this.chamadoSelecionadoId = id;
+            this.visibleChat = true;
 
+            this.buscarChat();
+
+            if (this.chatIntervalId) {
+                clearInterval(this.chatIntervalId);
+            }
+
+            this.chatIntervalId = setInterval(() => {
+                if (this.visibleChat && this.chamadoSelecionadoId === id) {
+                    this.buscarChat();
+                }
+            }, 5000);
+        },
         formatarTempo(segundos) {
             const min = String(Math.floor(segundos / 60)).padStart(2, '0');
             const sec = String(segundos % 60).padStart(2, '0');
             return `${min}:${sec}`;
         },
-
-        buscaMensagens() {
-            this.chatService.buscaChat(this.chamadoSelecionadoId).then((data) => {
-                if (data.status === 'success') {
-                    this.mensagens = data.mensagens;
-                    this.carregandoMensagens = false;
-                } else {
-                    this.mensagemFalha('Erro ao carregar o chat.');
-                }
-            });
-        },
-
         onFecharChat() {
             this.visibleChat = false;
             this.mensagens = [];
             this.carregandoMensagens = true;
             this.chamadoSelecionadoId = null;
             this.mensagemChat = '';
-        },
 
+            if (this.chatIntervalId) {
+                clearInterval(this.chatIntervalId);
+                this.chatIntervalId = null;
+            }
+        },
         onDragOver() {
             this.isDragging = true;
         },
@@ -153,9 +188,8 @@ export default {
                 const file = files[0];
                 if (file.type.startsWith('image/')) {
                     this.imagemSelecionada = file;
-
-                    this.chatService.enviarAnexo(file, this.chamadoSelecionadoId).then((data) => {
-                        this.buscaMensagens(this.chamadoSelecionadoId);
+                    this.chatService.enviarAnexo(file, this.chamadoSelecionadoId).then(() => {
+                        // Não busca o chat aqui, confia no WebSocket para a nova mensagem
                     });
                     this.mensagemSucesso(`Imagem "${file.name}" adicionada.`);
                 } else {
@@ -163,48 +197,51 @@ export default {
                 }
             }
         },
-
         enviarMensagem() {
+            this.enviandoMensagemBotao = true;
             this.erroMensagem = false;
 
             if (!this.mensagemChat) {
                 this.erroMensagem = true;
+                this.enviandoMensagemBotao = false;
                 return;
             }
 
-            this.chatService.enviarMensagem(this.mensagemChat, this.chamadoSelecionadoId).then((data) => {
-                if (data.status === 'success') {
+            this.chatService
+                .enviarMensagem(this.mensagemChat, this.chamadoSelecionadoId)
+                .then((data) => {
+                    if (data.status === 'success') {
+                        this.buscarChat(this.chamadoSelecionadoId);
+                        this.buscarChamados();
+                    } else {
+                        this.mensagemFalha('Erro ao enviar a mensagem.');
+                    }
+                })
+                .catch(() => {
+                    this.mensagemFalha('Erro inesperado ao enviar a mensagem.');
+                })
+                .finally(() => {
+                    this.enviandoMensagemBotao = false;
                     this.mensagemChat = '';
-                    this.buscaMensagens(this.chamadoSelecionadoId);
-                } else {
-                    this.mensagemFalha('Erro ao enviar a mensagem.');
-                }
-            });
+                });
         },
-
         assumirChamado(id) {
-            // Simulação de assumir chamado
             const chamado = this.novosChamados.find((c) => c.id === id);
             if (chamado) {
                 chamado.status = 'Em andamento';
                 this.meusChamados.push(chamado);
-                // this.novosChamados = this.novosChamados.filter((c) => c.id !== id);
                 this.mensagemSucesso(`Chamado #${id} assumido com sucesso!`);
-
-                this.chamadosService.assumeChamado(chamado.id, this.usuario_id).then((data) => {
+                this.chamadosService.assumeChamado(chamado.id, this.usuario_id).then(() => {
                     this.buscarChamados();
                 });
             }
         },
-
         mensagemSucesso(mensagem) {
             this.toast.add({ severity: 'success', summary: 'Sucesso', detail: mensagem, life: 3000 });
         },
-
         mensagemFalha(mensagem) {
             this.toast.add({ severity: 'error', summary: 'Erro', detail: mensagem, life: 3000 });
         },
-
         alterarStatus(chamado_id, status_id) {
             this.chamadosService.alterarStatusChamado(chamado_id, status_id).then((data) => {
                 if (data.status === 'Status do chamado alterado com sucesso!') {
@@ -215,7 +252,6 @@ export default {
                 }
             });
         },
-
         alterarTecnico(chamado_id, tecnico_id) {
             this.chamadosService.alterarTecnicoChamado(chamado_id, tecnico_id).then((data) => {
                 if (data.status === 'Tecnico do chamado alterado com sucesso!') {
@@ -226,15 +262,18 @@ export default {
                 }
             });
         },
-
         abrirImagem(url) {
             window.open(url, '_blank');
         },
-
         visualizarAnexo(anexo) {
-            this.chamadosService.buscaAnexo(anexo.id).then((data) => {
-                console.log(data);
-                window.open('http://api-ticket.gruporialma.com.br/storage/' + data.anexos[0].caminho, '_blank');
+            window.open('http://api-ticket.gruporialma.com.br/storage/' + anexo.caminho, '_blank');
+        },
+        scrollParaUltimaMensagem() {
+            this.$nextTick(() => {
+                const container = this.$refs.chatContainer;
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
             });
         }
     },
@@ -258,9 +297,9 @@ export default {
                 case 'Reaberto':
                     return 'info';
                 default:
+                    return 'info';
             }
         };
-
         const priorityColor = (prioridade) => {
             switch (prioridade) {
                 case 'Alta':
@@ -275,7 +314,6 @@ export default {
                     return 'info';
             }
         };
-
         return {
             statusColor,
             priorityColor
@@ -287,11 +325,8 @@ export default {
 <template>
     <Toast />
 
-    <!-- Modal de Chat para acompanhar -->
     <Dialog @hide="onFecharChat()" v-model:visible="visibleChat" modal header="Atendimento" :style="{ width: '50rem' }" :closable="true">
-        <!-- Mensagens fixas no HTML -->
-        <div class="flex flex-col gap-3 max-h-[400px] overflow-y-auto px-2 py-1">
-            <!-- Preloader enquanto carrega -->
+        <div ref="chatContainer" class="flex flex-col gap-3 max-h-[400px] overflow-y-auto px-2 py-1">
             <template v-if="carregandoMensagens">
                 <div v-for="n in 5" :key="n" class="flex flex-col gap-2">
                     <Skeleton height="1rem" width="30%" />
@@ -299,39 +334,34 @@ export default {
                     <Skeleton height="0.75rem" width="20%" />
                 </div>
             </template>
-
-            <!-- Mensagens reais -->
             <template v-else>
-                <div v-for="mensagem in mensagens" :key="mensagem.id" :class="['p-2 rounded-md max-w-[80%]', mensagem.usuario_id === usuario_id ? 'bg-blue-100 self-end text-right' : 'bg-gray-100 self-start text-left']">
-                    <p class="text-sm text-gray-700 mb-1">
-                        <strong>{{ mensagem.usuario_id === usuario_id ? 'Você' : mensagem.usuario }}</strong>
+                <div v-for="mensagem in mensagens" :key="mensagem.id" :class="['p-4 rounded-md max-w-[80%] flex flex-col relative', mensagem.usuario_id === usuario_id ? 'bg-blue-100 self-end' : 'bg-gray-100 self-start']">
+                    <p class="text-sm font-semibold mb-1" :class="mensagem.usuario_id === usuario_id ? 'text-blue-800' : 'text-gray-800'">
+                        {{ mensagem.usuario_id === usuario_id ? 'Você' : mensagem.usuario }}
                     </p>
-                    <!-- Aqui a condicional para mostrar imagem ou texto -->
-                    <div class="text-sm text-gray-600">
+                    <div class="text-sm text-gray-700 break-words overflow-hidden">
                         <template v-if="mensagem.mensagem === 'Imagem'">
-                            <img
-                                @click="abrirImagem(mensagem.imagem ? `http://api-ticket/storage/${mensagem.imagem}` : mensagem.urlImagem)"
-                                :src="mensagem.imagem ? `http://api-ticket/storage/${mensagem.imagem}` : mensagem.urlImagem"
-                                alt="Imagem enviada"
-                                class="max-w-xs max-h-48 rounded"
-                            />
+                            <img :src="mensagem.imagem ? `http://api-ticket/storage/${mensagem.imagem}` : mensagem.urlImagem" alt="Imagem enviada" class="max-w-full h-auto rounded-md shadow-sm" />
                         </template>
-
                         <template v-else>
                             {{ mensagem.mensagem }}
                         </template>
                     </div>
-                    <p class="text-xs text-gray-600 mt-1">{{ mensagem.enviado_em }}</p>
+                    <div class="flex items-center justify-end text-xs text-gray-500 mt-2">
+                        <span class="mr-1">{{ mensagem.enviado_em }}</span>
+                        <span :class="mensagem.lida ? 'text-green-500' : 'text-gray-400'">
+                            {{ mensagem.lida ? '✔✔' : '✔' }}
+                        </span>
+                    </div>
                 </div>
             </template>
         </div>
 
-        <!-- Campo de envio de mensagem -->
         <div class="flex items-center gap-2 mt-4">
             <div class="relative w-full" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave" @drop.prevent="onDrop" :class="{ 'border-2 border-dashed border-blue-400': isDragging }">
                 <InputText :class="['w-full', { 'p-invalid': erroMensagem }]" v-model="mensagemChat" placeholder="Digite sua mensagem ou arraste uma imagem" :style="{ color: 'red' }" />
             </div>
-            <Button @click.prevent="enviarMensagem()" severity="success" icon="pi pi-send" />
+            <Button v-if="!enviandoMensagemBotao" @click.prevent="enviarMensagem()" severity="success" icon="pi pi-send" />
         </div>
     </Dialog>
 
@@ -354,7 +384,6 @@ export default {
                         </h1>
                         <p class="text-gray-500">Painel de gerenciamento de chamados</p>
                     </div>
-
                     <div class="flex items-center gap-2 flex-col md:flex-row md:items-center md:gap-4">
                         <p class="text-xs text-gray-800">
                             Atualização automática em:
@@ -364,7 +393,6 @@ export default {
                 </div>
             </section>
 
-            <!-- Cards de Status -->
             <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
                 <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1">
                     <div class="flex items-start justify-between">
@@ -427,7 +455,6 @@ export default {
                 </div>
             </section>
 
-            <!-- Novos Chamados -->
             <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
                 <div class="p-5 border-b border-gray-100 flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -456,17 +483,16 @@ export default {
                     </Column>
                     <Column field="descricao" header="Descrição" headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="solicitante" header="Solicitante" headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="tecnico" header="Tecnico" headerClass="font-medium text-gray-600 text-xs uppercase" />
+                    <Column field="tecnico" header="Tecnico" headerClass="font-medium text-gray-600 text-xs uppercase">
+                        <template #body="{ data }">
+                            {{ data.tecnico }}<span v-if="data.tecnico_secundario"> | {{ data.tecnico_secundario }}</span>
+                        </template>
+                    </Column>
                     <Column field="status" header="Status" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <Tag :value="data.status" :severity="statusColor(data.status)" class="text-xs font-medium" />
                         </template>
                     </Column>
-                    <!-- <Column field="prioridade" header="Prioridade" headerClass="font-medium text-gray-600 text-xs uppercase">
-                        <template #body="{ data }">
-                            <Tag :value="data.prioridade" :severity="priorityColor(data.prioridade)" class="text-xs font-medium" />
-                        </template>
-                    </Column> -->
                     <Column field="dt_abertura" header="Data Abertura" headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="tecnico" header="Associar Tecnico" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
@@ -483,7 +509,6 @@ export default {
                 </DataTable>
             </section>
 
-            <!-- Chamados Atribuídos -->
             <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div class="p-5 border-b border-gray-100 flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -520,16 +545,19 @@ export default {
                     <Column field="dt_abertura" header="Data Abertura" headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="status" header="Status" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
-                            <!-- <Tag :value="data.status" :severity="statusColor(data.status)"
-                                class="text-xs font-medium" /> -->
                             <Dropdown v-model="data.status_id" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full md:w-14rem text-xs" @change="alterarStatus(data.id, data.status_id)" />
                         </template>
                     </Column>
                     <Column header="Ações" style="width: 180px" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
-                                <Button @click.prevent="visualizarChat(data.id)" icon="pi pi-comments" class="p-button-sm hover:bg-blue-50" v-tooltip.top="'Chat'" />
-                                <Button @click.prevent="visualizarAnexo(data)" icon="pi pi-file" class="p-button-sm p-button-info hover:bg-blue-50" v-tooltip.top="'Chat'" />
+                                <div class="relative">
+                                    <Button @click.prevent="visualizarChat(data.id)" icon="pi pi-comments" class="p-button-sm hover:bg-blue-50" v-tooltip.top="'Chat'" />
+                                    <span v-if="data?.qtd_mensagens_nao_lidas > 0" class="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                                        {{ data?.qtd_mensagens_nao_lidas }}
+                                    </span>
+                                </div>
+                                <Button v-if="data.anexo[0]" @click.prevent="visualizarAnexo(data.anexo[0])" icon="pi pi-file" class="p-button-sm p-button-info hover:bg-blue-50" v-tooltip.top="'Anexo'" />
                             </div>
                         </template>
                     </Column>
@@ -562,7 +590,6 @@ export default {
     0% {
         transform: rotate(0deg);
     }
-
     100% {
         transform: rotate(360deg);
     }

@@ -19,6 +19,10 @@ class Mensagem extends Mailable
 
     public $dados;
 
+    public function broadcastAs()
+    {
+        return 'mensagem.enviada';
+    }
 
     public function __construct($dados)
     {
@@ -31,7 +35,7 @@ class Mensagem extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Mensagem',
+            subject: 'Não Responda - Nova Mensagem no Chamado: ' . $this->dados['titulo'],
         );
     }
 

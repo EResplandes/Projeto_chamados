@@ -9,6 +9,7 @@ use App\Models\Chamados;
 use App\Mail\Mensagem;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use App\Events\MensagemEnviada;
 
 class ChatService
 {
@@ -60,17 +61,12 @@ class ChatService
 
             Mail::to($solicitante->email)->send(new Mensagem($dados));
 
-            \Log::info('Notificação enviada para ' . $solicitante->email);
-
-            logger('Notificação enviada para ' . $solicitante->email);
-
             return [
                 'mensagem' => $chat,
                 'status' => 'success',
                 'http_code' => 201
             ];
         } catch (\Exception $e) {
-            dd($e);
             return [
                 'status' => $e,
                 'http_code' => 500,
@@ -102,4 +98,27 @@ class ChatService
             ];
         }
     }
+
+    public function marcaMensagensComoLidas($idChamado, $idUsuario)
+    {
+        try {
+            Chat::where('chamado_id', $idChamado)
+                ->where('usuario_id', '!=', $idUsuario)
+                ->where('lida', false)
+                ->update(['lida' => true]);
+
+            return [
+                'mensagem' => 'Mensagens marcadas como lidas com sucesso.',
+                'status' => 'success',
+                'http_code' => 200
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'error',
+                'http_code' => 500,
+            ];
+        }
+    }
+
+
 }

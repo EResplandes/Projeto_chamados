@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Chamados;
 use App\Http\Resources\ChamadosResource;
+use App\Http\Resources\ChamadosAdminResource;
 use App\Models\Anexos;
 use App\Models\HistoricoChamados;
 use App\Models\User;
@@ -130,13 +131,16 @@ class ChamadosService
     public function buscarChamadosAdmin($id)
     {
         try {
-            $novosChamados = ChamadosResource::collection(
+            $novosChamados = ChamadosAdminResource::collection(
                 Chamados::where('status_id', '!=', '3')->orderBy('created_at', 'desc')
                     ->get()
             );
 
-            $meusChamados = ChamadosResource::collection(
-                Chamados::where('tecnico_id', $id)
+            $meusChamados = ChamadosAdminResource::collection(
+                Chamados::where(function ($query) use ($id) {
+                    $query->where('tecnico_id', $id)
+                        ->orWhere('tecnico_secundario_id', $id);
+                })
                     ->orderBy('created_at', 'desc')
                     ->get()
             );
@@ -186,13 +190,26 @@ class ChamadosService
     public function assumeChamado($idChamado, $idUsuario)
     {
         try {
-            Chamados::where('id', $idChamado)
-                ->update(
-                    [
-                        'tecnico_id' => $idUsuario,
-                        'status_id' => 2
-                    ]
-                ); // Altera o status para "Em Andamento"
+            $verificaSeJaTemTecnico = Chamados::where('id', $idChamado)->pluck('tecnico_id')->first();
+
+            if ($verificaSeJaTemTecnico) {
+                Chamados::where('id', $idChamado)
+                    ->update(
+                        [
+                            'tecnico_secundario_id' => $idUsuario,
+                            'status_id' => 2
+                        ]
+                    ); // Altera o status para "Em Andamento"
+            } else {
+                Chamados::where('id', $idChamado)
+                    ->update(
+                        [
+                            'tecnico_id' => $idUsuario,
+                            'status_id' => 2
+                        ]
+                    ); // Altera o status para "Em Andamento"
+
+            }
 
             return [
                 'status' => 'Chamado assumido com sucesso!',
@@ -228,9 +245,18 @@ class ChamadosService
     public function alteraTecnicoChamado($idChamado, $idTecnico)
     {
         try {
-            $chamado = Chamados::findOrFail($idChamado);
-            $chamado->tecnico_id = $idTecnico;
-            $chamado->save();
+
+            $verificaSeJaTemTecnico = Chamados::where('id', $idChamado)->pluck('tecnico_id')->first();
+
+            if ($verificaSeJaTemTecnico) {
+                $chamado = Chamados::findOrFail($idChamado);
+                $chamado->tecnico_secundario_id = $idTecnico;
+                $chamado->save();
+            } else {
+                $chamado = Chamados::findOrFail($idChamado);
+                $chamado->tecnico_id = $idTecnico;
+                $chamado->save();
+            }
 
             return [
                 'status' => 'Tecnico do chamado alterado com sucesso!',

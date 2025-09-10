@@ -43,4 +43,14 @@ class ChatController extends Controller
             'status' => $response['status'] ?? 'error',
         ], $response['http_code'] ?? 400);
     }
+
+    public function marcaMensagensComoLidas($idChamado, $idUsuario)
+    {
+        $response = $this->chatService->marcaMensagensComoLidas($idChamado, $idUsuario);
+
+        return response()->json([
+            'mensagem' => $response['mensagem'] ?? null,
+            'status' => $response['status'] ?? 'error',
+        ], $response['http_code'] ?? 400);
+    }
 }

@@ -47,4 +47,5 @@ Route::prefix('chat')->group(function () {
     Route::get('/busca-mensagens/{id}', [ChatController::class, 'buscaMensagens']);
     Route::post('/enviar-mensagem', [ChatController::class, 'enviarMensagem']);
     Route::post('/enviar-anexo', [ChatController::class, 'enviarAnexo']);
+    Route::get('/marca-mensagens-como-lidas/{idChamado}/{idUsuario}', [ChatController::class, 'marcaMensagensComoLidas']);
 })->middleware('auth:api');

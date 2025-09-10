@@ -14,6 +14,7 @@ class Chamados extends Model
         'descricao',
         'urgencia',
         'tecnico_id',
+        'tecnico_secundario_id',
         'solicitante_id',
         'categoria_id',
         'status_id',
@@ -34,6 +35,11 @@ class Chamados extends Model
         return $this->belongsTo(User::class, 'tecnico_id');
     }
 
+    public function tecnico_secundario()
+    {
+        return $this->belongsTo(User::class, 'tecnico_secundario_id');
+    }
+
     public function categoria()
     {
         return $this->belongsTo(Categorias::class, 'categoria_id');
@@ -44,8 +50,8 @@ class Chamados extends Model
         return $this->belongsTo(Status::class, 'status_id');
     }
 
-    public function anexo()
+    public function anexos()
     {
-        return $this->belongsTo(Anexo::class, 'anexo_id');
+        return $this->hasMany(Anexos::class, 'chamado_id');
     }
 }

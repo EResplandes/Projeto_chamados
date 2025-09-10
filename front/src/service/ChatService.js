@@ -69,4 +69,23 @@ export default class ChatService {
                 throw error;
             });
     }
+
+    async marcaMensagensComoLidas(idChamado) {
+        return await fetch(`${API_URL}/chat/marca-mensagens-como-lidas/${idChamado}/${usuario_id}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            }
+        })
+            .then((res) => res.json())
+            .then((d) => {
+                return d;
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                throw error;
+            });
+    }
+
 }
