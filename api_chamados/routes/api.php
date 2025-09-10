@@ -7,6 +7,7 @@ use App\Http\Controllers\CategoriasController;
 use App\Http\Controllers\ChamadosController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\UsuariosController;
+use App\Http\Controllers\DashboardController;
 
 Route::prefix('autenticacao')->group(function () {
     Route::post('/login', [AutenticacaoController::class, 'login']);
@@ -49,3 +50,10 @@ Route::prefix('chat')->group(function () {
     Route::post('/enviar-anexo', [ChatController::class, 'enviarAnexo']);
     Route::get('/marca-mensagens-como-lidas/{idChamado}/{idUsuario}', [ChatController::class, 'marcaMensagensComoLidas']);
 })->middleware('auth:api');
+
+
+Route::prefix('dashboard')->group(function () {
+    Route::controller(DashboardController::class)->group(function () {
+        Route::get('/indicadores-gerais', 'indicadoresGerais');
+    });
+});
