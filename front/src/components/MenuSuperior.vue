@@ -125,6 +125,7 @@ export default {
 
             <!-- Menus -->
             <ul class="flex items-center gap-4 ml-6 text-sm font-medium text-gray-700 dark:text-gray-200">
+                <li><a v-if="tipo_usuario == 'tecnico'" href="/dashboard" class="hover:text-blue-600">Dashboard</a></li>
                 <li><a v-if="tipo_usuario == 'tecnico' || tipo_usuario == 'solicitante'" href="/meus-chamados" class="hover:text-blue-600">Meus Chamados</a></li>
                 <li><a v-if="tipo_usuario == 'tecnico'" href="/atendimento-chamados" class="hover:text-blue-600">Atendimento</a></li>
                 <li><a v-if="tipo_usuario == 'tecnico'" href="/admin" class="hover:text-blue-600">Usuários</a></li>
