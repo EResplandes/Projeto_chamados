@@ -37,6 +37,7 @@ export default {
             indicadores: [],
             carregando: true,
             visibleChat: false,
+            sidebarMeusChamados: false,
             enviandoMensagemBotao: false,
             carregandoMensagens: true,
             usuario_id: JSON.parse(localStorage.getItem('usuario'))?.id,
@@ -461,6 +462,9 @@ export default {
                         <h2 class="text-lg font-semibold text-gray-800">Novos Chamados</h2>
                         <Tag :value="indicadores.novos_chamados" severity="info" class="text-xs font-medium" />
                     </div>
+                    <div class="align-self-end">
+                        <Button label="Ver Meus Chamados" icon="pi pi-list" @click="sidebarMeusChamados = true" />
+                    </div>
                 </div>
 
                 <DataTable
@@ -508,61 +512,65 @@ export default {
                     </Column>
                 </DataTable>
             </section>
-
-            <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="p-5 border-b border-gray-100 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <h2 class="text-lg font-semibold text-gray-800">Meus Chamados</h2>
-                        <Tag :value="indicadores.meus_chamados" severity="warning" class="text-xs font-medium" />
-                    </div>
+            <!-- 
+            <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800">Meus Chamados</h2>
+                    <Tag :value="indicadores.meus_chamados" severity="warning" class="text-xs font-medium" />
                 </div>
 
-                <DataTable
-                    :value="meusChamados"
-                    paginator
-                    :rows="5"
-                    :rowsPerPageOptions="[5, 10, 20]"
-                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                    currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords}"
-                    responsiveLayout="scroll"
-                    class="p-datatable-sm border-none p-6"
-                    stripedRows
-                >
-                    <Column field="id" header="#" style="width: 60px" headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="titulo" header="Título" headerClass="font-medium text-gray-600 text-xs uppercase">
-                        <template #body="{ data }">
-                            <div class="font-medium">{{ data.titulo }}</div>
-                            <div class="text-xs text-gray-500"># {{ data.categoria }}</div>
-                        </template>
-                    </Column>
-                    <Column field="descricao" header="Descrição" headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="solicitante" header="Solicitante" headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="status" header="Status" headerClass="font-medium text-gray-600 text-xs uppercase">
-                        <template #body="{ data }">
-                            <Tag :value="data.status" :severity="statusColor(data.status)" class="text-xs font-medium" />
-                        </template>
-                    </Column>
-                    <Column field="dt_abertura" header="Data Abertura" headerClass="font-medium text-gray-600 text-xs uppercase" />
-                    <Column field="status" header="Status" headerClass="font-medium text-gray-600 text-xs uppercase">
-                        <template #body="{ data }">
-                            <Dropdown v-model="data.status_id" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="Status" class="w-full md:w-14rem text-xs" @change="alterarStatus(data.id, data.status_id)" />
-                        </template>
-                    </Column>
-                    <Column header="Ações" style="width: 180px" headerClass="font-medium text-gray-600 text-xs uppercase">
-                        <template #body="{ data }">
-                            <div class="flex items-center gap-1">
-                                <div class="relative">
-                                    <Button @click.prevent="visualizarChat(data.id)" icon="pi pi-comments" class="p-button-sm hover:bg-blue-50" v-tooltip.top="'Chat'" />
-                                    <span v-if="data?.qtd_mensagens_nao_lidas > 0" class="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                                        {{ data?.qtd_mensagens_nao_lidas }}
-                                    </span>
-                                </div>
-                                <Button v-if="data.anexo[0]" @click.prevent="visualizarAnexo(data.anexo[0])" icon="pi pi-file" class="p-button-sm p-button-info hover:bg-blue-50" v-tooltip.top="'Anexo'" />
-                            </div>
-                        </template>
-                    </Column>
-                </DataTable>
-            </section>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div v-for="chamado in meusChamados" :key="chamado.id" class="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-gray-800">#{{ chamado.id }} - {{ chamado.titulo }}</h3>
+                            <Tag :value="chamado.status" :severity="statusColor(chamado.status)" class="text-xs font-medium" />
+                        </div>
+                        <p class="text-sm text-gray-600 line-clamp-2">{{ chamado.descricao }}</p>
+                        <p class="text-xs text-gray-500 mt-2">Solicitante: {{ chamado.solicitante }}</p>
+                        <p class="text-xs text-gray-500">Aberto em: {{ chamado.dt_abertura }}</p>
+
+                        <div class="flex items-center gap-2 mt-3">
+                            <Button @click="visualizarChat(chamado.id)" icon="pi pi-comments" class="p-button-sm" />
+                            <Button v-if="chamado.anexo[0]" @click="visualizarAnexo(chamado.anexo[0])" icon="pi pi-file" class="p-button-sm p-button-info" />
+                            <Dropdown v-model="chamado.status_id" :options="statusOptions" optionLabel="label" optionValue="value" class="w-full md:w-32 text-xs" @change="alterarStatus(chamado.id, chamado.status_id)" />
+                        </div>
+                    </div>
+                </div>
+            </section> -->
+
+            <!-- Sidebar de Meus Chamados -->
+            <Sidebar v-model:visible="sidebarMeusChamados" position="right" :style="{ width: '40rem' }" modal>
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Meus Chamados</h2>
+                <Tag :value="indicadores.meus_chamados" severity="warning" class="text-xs font-medium mb-4" />
+
+                <div class="grid gap-4">
+                    <div v-for="chamado in meusChamados" :key="chamado.id" class="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-bold text-gray-800">#{{ chamado.id }} - {{ chamado.titulo }}</h4>
+                            <Tag :value="chamado.status" :severity="statusColor(chamado.status)" class="text-xs font-medium" />
+                        </div>
+                        <div class="mb-2 bg-gray-300 p-2 rounded">
+                            <p class="text-sm">{{ chamado.descricao }}</p>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-2">Solicitante: {{ chamado.solicitante }}</p>
+                        <p class="text-sm text-gray-500"><span class="font-weight-bold">Aberto em:</span> {{ chamado.dt_abertura }}</p>
+
+                        <div class="flex items-center gap-2 mt-3 justify-end">
+                            <Button @click="visualizarChat(chamado.id)" icon="pi pi-comments" label="Chat" class="p-button-sm" />
+                            <Button v-if="chamado.anexo[0]" @click="visualizarAnexo(chamado.anexo[0])" label="Anexo" icon="pi pi-file" class="p-button-sm p-button-info" />
+                            <Dropdown
+                                placeholder="Selecione o status"
+                                v-model="chamado.status_id"
+                                :options="statusOptions"
+                                optionLabel="label"
+                                optionValue="value"
+                                class="w-full md:w-60 text-xs"
+                                @change="alterarStatus(chamado.id, chamado.status_id)"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </Sidebar>
         </main>
     </div>
 </template>

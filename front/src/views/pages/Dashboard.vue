@@ -20,7 +20,7 @@ export default {
             indicadores: null,
             mensagensNaoLidas: [],
             statusSistemas: [],
-            chamadosCategorias: [], // Adicione esta variável para armazenar os dados do gráfico de categorias
+            chamadosCategorias: [],
             lastUpdated: '',
             updateInterval: null,
             chartOptions: {
@@ -75,7 +75,6 @@ export default {
             try {
                 const response = await this.dashboardService.buscaIndicadoresGereais();
                 if (response.status) {
-                    // Retorne todos os dados necessários
                     return {
                         chamados: response.chamados,
                         indicadores: response.indicadores,
@@ -166,7 +165,6 @@ export default {
             };
         },
         categoryChartData() {
-            // CORRIGIDO: Agora usa o array this.chamadosCategorias, que vem do backend
             const labels = this.chamadosCategorias.map((item) => item.categoria);
             const data = this.chamadosCategorias.map((item) => item.total);
 
@@ -195,7 +193,6 @@ export default {
                     <div class="flex justify-between items-end">
                         <div class="flex items-center gap-4">
                             <h1 class="text-4xl font-extrabold text-blue-400">Dashboard</h1>
-                            <span class="text-2xl animate-pulse">📊</span>
                         </div>
                         <p class="text-gray-400 text-lg">
                             Última atualização: <span class="font-bold">{{ lastUpdated }}</span>
@@ -312,7 +309,6 @@ export default {
 </template>
 
 <style>
-/* Estilos globais para a tabela PrimeVue */
 .p-datatable-thead > tr > th {
     color: #9ca3af !important;
 }
@@ -334,7 +330,6 @@ export default {
     background-color: #111827 !important;
 }
 
-/* NOVO: Estilo para a animação de piscar */
 .blink-animation {
     animation: blink 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -349,7 +344,6 @@ export default {
     }
 }
 
-/* Restante do CSS do componente (não foi alterado) */
 .min-h-screen {
     min-height: 100vh;
 }

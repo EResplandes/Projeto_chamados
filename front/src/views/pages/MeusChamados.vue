@@ -43,6 +43,7 @@ export default {
             chatIntervalId: null,
             visibleChat: false,
             enviandoMensagemBotao: false,
+            erroPrenchimento: false,
             carregandoMensagens: true,
             usuario_id: JSON.parse(localStorage.getItem('usuario'))?.id,
             mensagemChat: null,
@@ -107,6 +108,11 @@ export default {
             });
         },
         abrirChamado() {
+            if (!this.formChamado.titulo || !this.formChamado.descricao || !this.formChamado.categoria) {
+                this.erroPrenchimento = true;
+                return;
+            }
+
             this.chamadosService.abrirChamado(this.formChamado).then((data) => {
                 if (data.status == 'Chamado registrado com sucesso!') {
                     this.mensagemSucesso(data.status);
@@ -343,6 +349,9 @@ export default {
         <div class="mb-4">
             <label for="anexo" class="font-semibold block mb-1">Anexo</label>
             <FileUpload style="background-color: #004285" :key="fileKey" chooseLabel="Selecionar Arquivo" @change="uploadPdf" mode="basic" type="file" ref="pdf" name="demo[]" accept=".pdf,.docx" :maxFileSize="999999999"></FileUpload>
+        </div>
+        <div v-if="this.erroPrenchimento" class="text-sm text-gray-500 mb-4 text-center">
+            <Message class="text-center" severity="error">Por favor, preencha todos os campos obrigatórios!</Message>
         </div>
         <template #footer>
             <Button label="Cancelar" text severity="secondary" @click="visible = false" />
