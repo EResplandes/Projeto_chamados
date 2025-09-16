@@ -512,31 +512,6 @@ export default {
                     </Column>
                 </DataTable>
             </section>
-            <!-- 
-            <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-semibold text-gray-800">Meus Chamados</h2>
-                    <Tag :value="indicadores.meus_chamados" severity="warning" class="text-xs font-medium" />
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <div v-for="chamado in meusChamados" :key="chamado.id" class="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                        <div class="flex justify-between items-center mb-2">
-                            <h3 class="font-bold text-gray-800">#{{ chamado.id }} - {{ chamado.titulo }}</h3>
-                            <Tag :value="chamado.status" :severity="statusColor(chamado.status)" class="text-xs font-medium" />
-                        </div>
-                        <p class="text-sm text-gray-600 line-clamp-2">{{ chamado.descricao }}</p>
-                        <p class="text-xs text-gray-500 mt-2">Solicitante: {{ chamado.solicitante }}</p>
-                        <p class="text-xs text-gray-500">Aberto em: {{ chamado.dt_abertura }}</p>
-
-                        <div class="flex items-center gap-2 mt-3">
-                            <Button @click="visualizarChat(chamado.id)" icon="pi pi-comments" class="p-button-sm" />
-                            <Button v-if="chamado.anexo[0]" @click="visualizarAnexo(chamado.anexo[0])" icon="pi pi-file" class="p-button-sm p-button-info" />
-                            <Dropdown v-model="chamado.status_id" :options="statusOptions" optionLabel="label" optionValue="value" class="w-full md:w-32 text-xs" @change="alterarStatus(chamado.id, chamado.status_id)" />
-                        </div>
-                    </div>
-                </div>
-            </section> -->
 
             <!-- Sidebar de Meus Chamados -->
             <Sidebar v-model:visible="sidebarMeusChamados" position="right" :style="{ width: '40rem' }" modal>
