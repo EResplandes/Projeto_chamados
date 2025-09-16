@@ -108,14 +108,11 @@
 
             <p><strong>Mensagem:</strong> "{{ $dados['mensagem'] ?? 'Esta é uma mensagem de teste para garantir que seu sistema está funcionando perfeitamente.' }}"</p>
 
-            <p>Se precisar de suporte ou tiver qualquer dúvida, não hesite em nos contatar.</p>
-
-            <p><a href="mailto:ti@gruporialma.com.br" class="btn">Contato com TI</a></p>
         </div>
 
         <div class="footer">
             <p>Este é um e-mail automático. Por favor, não responda.</p>
-            <p>© {{ date('Y') }} Sua Empresa - Departamento de Tecnologia da Informação</p>
+            <p>© {{ date('Y') }} Grupo Rialma S/A - Departamento de Tecnologia da Informação</p>
         </div>
     </div>
 </body>

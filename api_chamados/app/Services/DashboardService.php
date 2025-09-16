@@ -75,9 +75,6 @@ class DashboardService
 {
     public function indicadoresGerais()
     {
-        // Removido DB::beginTransaction() pois é uma operação de leitura
-        // DB::beginTransaction();
-
         try {
             // Buscar todos indicadores
             $indicadores = [
@@ -104,6 +101,7 @@ class DashboardService
             // Buscar mensagens não lidas
             $mensagens_nao_lidas = ChatResource::collection(
                 Chat::where('lida', false)
+                    ->whereNotIn('remetente_id', [1, 2, 3, 4, 5, 6]) 
                     ->orderBy('created_at', 'desc')
                     ->get()
             );
@@ -111,7 +109,6 @@ class DashboardService
             // Verificar serviços externos
             $servicos = [
                 'Link' => 'https://link.gruporialma.com.br',
-                'Protheus' => '10.0.11.184',
                 'Servidor Principal' => '10.0.10.171',
                 'Servidor Secundario' => '10.0.9.3',
                 'Minerion' => '10.0.10.240',
@@ -119,7 +116,8 @@ class DashboardService
                 'FileServer' => '10.0.10.236',
                 'AD' => '10.0.8.144',
                 'DNS' => '10.0.8.133',
-                'Firewall' => '10.0.11.254'
+                'Firewall' => '10.0.11.254',
+                'Protheus' => '10.0.8.111'
             ];
 
             $status_servicos = ServicoStatusChecker::verificarServicos($servicos);
