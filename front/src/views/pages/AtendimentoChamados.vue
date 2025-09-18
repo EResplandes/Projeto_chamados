@@ -507,6 +507,7 @@ export default {
                         <template #body="{ data }">
                             <div class="flex items-center gap-1">
                                 <Button @click.prevent="assumirChamado(data.id)" icon="pi pi-user-plus" class="text-green-500 hover:bg-green-50" v-tooltip.top="'Assumir Chamado'" />
+                                <Button @click.prevent="visualizarChat(data.id)" icon="pi pi-comments" severity="info" class="text-blue-500 hover:bg-blue-50" v-tooltip.top="'Visualizar Chat'" />
                             </div>
                         </template>
                     </Column>
