@@ -189,9 +189,7 @@ export default {
                 const file = files[0];
                 if (file.type.startsWith('image/')) {
                     this.imagemSelecionada = file;
-                    this.chatService.enviarAnexo(file, this.chamadoSelecionadoId).then(() => {
-                        // Não busca o chat aqui, confia no WebSocket para a nova mensagem
-                    });
+                    this.chatService.enviarAnexo(file, this.chamadoSelecionadoId).then(() => {});
                     this.mensagemSucesso(`Imagem "${file.name}" adicionada.`);
                 } else {
                     this.mensagemFalha('Somente arquivos de imagem são permitidos.');

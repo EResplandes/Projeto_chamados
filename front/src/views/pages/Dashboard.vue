@@ -80,7 +80,7 @@ export default {
                         indicadores: response.indicadores,
                         mensagens: response.mensagens_nao_lidas,
                         statusSistemas: response.status_servicos,
-                        chamadosCategorias: response.chamados_categorias // CORRIGIDO: Retornando o array
+                        chamadosCategorias: response.chamados_categorias
                     };
                 } else {
                     const toast = useToast();
@@ -112,7 +112,7 @@ export default {
             this.indicadores = dados.indicadores;
             this.mensagensNaoLidas = dados.mensagens;
             this.statusSistemas = dados.statusSistemas;
-            this.chamadosCategorias = dados.chamadosCategorias; // CORRIGIDO: Atribuindo os dados
+            this.chamadosCategorias = dados.chamadosCategorias;
             this.lastUpdated = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         },
         urgencyColor(urgencia) {
