@@ -67,7 +67,7 @@ class ChamadosService
             // 1ª Passo -> Validar os dados recebidos
             $dados = [
                 'titulo' =>  strtoupper($request->titulo),
-                'descricao' => strtoupper($request->descricao),
+                'descricao' => $request->descricao,
                 'status_id' => 1,
                 'prioridade' => $request->urgencia,
                 'categoria_id' => $request->categoria_id,
