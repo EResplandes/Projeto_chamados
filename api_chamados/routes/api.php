@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AutenticacaoController;
 use App\Http\Controllers\CategoriasController;
@@ -50,7 +49,6 @@ Route::prefix('chat')->group(function () {
     Route::post('/enviar-anexo', [ChatController::class, 'enviarAnexo']);
     Route::get('/marca-mensagens-como-lidas/{idChamado}/{idUsuario}', [ChatController::class, 'marcaMensagensComoLidas']);
 })->middleware('auth:api');
-
 
 Route::prefix('dashboard')->group(function () {
     Route::controller(DashboardController::class)->group(function () {

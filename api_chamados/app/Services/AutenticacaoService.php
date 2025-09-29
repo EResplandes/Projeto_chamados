@@ -36,7 +36,6 @@ class AutenticacaoService
         ];
     }
 
-    // LOGOUT
     public function logout($id)
     {
         auth()->logout();

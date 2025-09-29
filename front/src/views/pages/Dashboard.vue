@@ -5,11 +5,11 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import DashboardService from '@/service/DashboardService.js';
+import audioSource from '../../assets/audio/NovoChamado.mp3';
 
 export default {
     name: 'ITDashboard',
     components: {
-        Chart,
         DataTable,
         Column,
         Tag
@@ -23,6 +23,11 @@ export default {
             chamadosCategorias: [],
             lastUpdated: '',
             updateInterval: null,
+            previousNewCalls: 0,
+            scrollInterval: null,
+            scrollSpeed: 50,
+            scrollStep: 1,
+
             chartOptions: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -64,13 +69,75 @@ export default {
     mounted() {
         this.atualizarDashboard();
         this.updateInterval = setInterval(this.atualizarDashboard, 15000);
+        // this.startAutoScroll();
     },
     beforeUnmount() {
         if (this.updateInterval) {
             clearInterval(this.updateInterval);
         }
+
+        if (this.scrollInterval) {
+            clearInterval(this.scrollInterval);
+        }
+    },
+    watch: {
+        indicadores: {
+            handler(newIndicadores, oldIndicadores) {
+                if (newIndicadores && newIndicadores.chamados_novos !== undefined) {
+                    const currentNewCalls = newIndicadores.chamados_novos;
+
+                    if (oldIndicadores === null) {
+                        this.previousNewCalls = currentNewCalls;
+                        return;
+                    }
+
+                    if (currentNewCalls > this.previousNewCalls) {
+                        this.tocarNovoChamado();
+                    }
+
+                    this.previousNewCalls = currentNewCalls;
+                }
+            },
+            deep: true
+        }
     },
     methods: {
+        startAutoScroll() {
+            if (this.scrollInterval) {
+                clearInterval(this.scrollInterval);
+            }
+
+            this.$nextTick(() => {
+                const scrollContainer = this.$refs.chamadosScrollContainer;
+
+                if (!scrollContainer) return;
+
+                let isAtBottom = false;
+
+                this.scrollInterval = setInterval(() => {
+                    const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+
+                    if (scrollHeight <= clientHeight) {
+                        return;
+                    }
+
+                    // Verifica se está no final (com uma pequena margem de erro)
+                    if (scrollTop + clientHeight >= scrollHeight - this.scrollStep) {
+                        isAtBottom = true;
+                    } else {
+                        isAtBottom = false;
+                    }
+
+                    if (isAtBottom) {
+                        // Volta para o topo suavemente ou instantaneamente
+                        scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        scrollContainer.scrollTop += this.scrollStep;
+                    }
+                }, this.scrollSpeed);
+            });
+        },
+
         async gerarDados() {
             try {
                 const response = await this.dashboardService.buscaIndicadoresGereais();
@@ -108,6 +175,7 @@ export default {
 
         async atualizarDashboard() {
             const dados = await this.gerarDados();
+            console.log(dados);
             this.chamados = dados.chamados;
             this.indicadores = dados.indicadores;
             this.mensagensNaoLidas = dados.mensagens;
@@ -115,71 +183,46 @@ export default {
             this.chamadosCategorias = dados.chamadosCategorias;
             this.lastUpdated = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         },
-        urgencyColor(urgencia) {
-            switch (urgencia) {
+
+        tocarNovoChamado() {
+            try {
+                const audio = new window.Audio(audioSource);
+                audio.play().catch((e) => {
+                    if (e.name !== 'NotAllowedError') {
+                        console.error('Erro ao tocar o áudio:', e);
+                    }
+                });
+            } catch (error) {
+                console.error('Erro ao criar objeto de áudio:', error);
+            }
+        },
+
+        urgencyColor(prioridade) {
+            switch (prioridade) {
                 case 'Crítica':
                 case 'Alta':
-                    return 'danger';
+                    return 'danger'; // Cor vermelha/perigo
                 case 'Média':
-                    return 'warning';
+                    return 'warning'; // Cor amarela/aviso
                 case 'Baixa':
+                    return 'info'; // Cor azul/informação
+                default:
+                    return 'secondary'; // Cor cinza/secundária
+            }
+        },
+
+        statusColor(status) {
+            switch (status) {
+                case 'Novo':
                     return 'info';
+                case 'Em andamento':
+                    return 'warning';
+                case 'Finalizado':
+                case 'Reaberto':
+                    return 'success';
                 default:
                     return 'secondary';
             }
-        }
-    },
-    computed: {
-        urgencyChartData() {
-            const counts = this.chamados.reduce((acc, curr) => {
-                acc[curr.urgencia] = (acc[curr.urgencia] || 0) + 1;
-                return acc;
-            }, {});
-
-            const labels = Object.keys(counts);
-            const data = Object.values(counts);
-
-            const backgroundColors = labels.map((label) => {
-                switch (label) {
-                    case 'Crítica':
-                    case 'Alta':
-                        return '#ef4444';
-                    case 'Média':
-                        return '#f59e0b';
-                    case 'Baixa':
-                        return '#3b82f6';
-                    default:
-                        return '#d1d5db';
-                }
-            });
-
-            return {
-                labels: labels,
-                datasets: [
-                    {
-                        data: data,
-                        backgroundColor: backgroundColors,
-                        hoverOffset: 4
-                    }
-                ]
-            };
-        },
-        categoryChartData() {
-            const labels = this.chamadosCategorias.map((item) => item.categoria);
-            const data = this.chamadosCategorias.map((item) => item.total);
-
-            return {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Chamados',
-                        data: data,
-                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                        borderColor: '#3b82f6',
-                        borderWidth: 1
-                    }
-                ]
-            };
         }
     }
 };
@@ -189,16 +232,7 @@ export default {
     <div class="min-h-screen bg-gray-900 text-white font-sans p-8 flex flex-col items-center">
         <div class="w-full max-w-screen-xl">
             <div class="grid grid-cols-12 gap-8 h-full">
-                <div class="col-span-8 flex flex-col gap-8">
-                    <div class="flex justify-between items-end">
-                        <div class="flex items-center gap-4">
-                            <h1 class="text-4xl font-extrabold text-blue-400">Dashboard</h1>
-                        </div>
-                        <p class="text-gray-400 text-lg">
-                            Última atualização: <span class="font-bold">{{ lastUpdated }}</span>
-                        </p>
-                    </div>
-
+                <div class="col-span-10 flex flex-col gap-8">
                     <section class="grid grid-cols-4 gap-6">
                         <div class="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700 transition-all hover:border-blue-500 hover:scale-105">
                             <div class="flex items-center justify-between">
@@ -238,68 +272,62 @@ export default {
                         </div>
                     </section>
 
-                    <section class="grid w-full">
-                        <DataTable :value="chamados" class="p-datatable-sm" stripedRows>
-                            <Column field="titulo" header="Título" headerClass="text-gray-400 text-xs uppercase" bodyClass="text-sm text-white font-medium">
+                    <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden p-4 h-full max-h-[800px]">
+                        <DataTable
+                            :value="chamados"
+                            :paginator="true"
+                            :rows="10"
+                            :rowsPerPageOptions="[10, 25, 50]"
+                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} chamados"
+                            class="p-datatable-striped"
+                            :loading="!chamados.length"
+                            emptyMessage="Nenhum chamado encontrado."
+                        >
+                            <Column field="id" header="ID" style="width: 4%"></Column>
+                            <Column field="dt_abertura" header="Data Abertura" style="width: 10%"></Column>
+                            <Column field="titulo" header="Título" style="width: 50%"></Column>
+                            <Column field="categoria" header="Categoria" style="width: 10%"></Column>
+                            <Column field="prioridade" header="Urgência" style="width: 10%">
                                 <template #body="{ data }">
-                                    <div class="font-medium truncate">{{ data.titulo }}</div>
-                                    <div class="text-xs text-gray-500">#{{ data.id }} • {{ data.categoria }}</div>
+                                    <Tag :severity="urgencyColor(data.prioridade)" :value="data.prioridade" />
                                 </template>
                             </Column>
-                            <Column field="urgencia" header="Urgência" headerClass="text-gray-400 text-xs uppercase">
+                            <Column field="solicitante" header="Solicitante" style="width: 15%"></Column>
+                            <Column field="tecnico" header="Responsável" style="width: 15%"></Column>
+                            <Column field="status" header="Status" style="width: 10%">
                                 <template #body="{ data }">
-                                    <Tag :value="data.prioridade" :severity="urgencyColor(data.prioridade)" class="text-xs font-medium" />
+                                    <Tag :severity="statusColor(data.status)" :value="data.status" />
                                 </template>
                             </Column>
-                            <Column field="dt_abertura" header="Abertura" headerClass="text-gray-400 text-xs uppercase" bodyClass="text-xs text-gray-500" />
-                            <Column field="tecnico" header="Técnico" headerClass="text-gray-400 text-xs uppercase" bodyClass="text-sm text-gray-300" />
                         </DataTable>
-                    </section>
-
-                    <section class="grid w-full bg-gray-800 p-6">
-                        <h3 class="text-lg font-bold text-gray-300 mb-4">Status da Infraestrutura</h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div
-                                v-for="item in statusSistemas"
-                                :key="item.nome"
-                                :class="{ 'p-3 rounded-lg flex items-center gap-3 transition-colors': true, 'bg-green-700': item.status === 'Online', 'bg-red-700 border-2 border-red-400 blink-animation': item.status === 'Offline' }"
-                            >
-                                <i :class="{ 'text-2xl': true, 'pi pi-check-circle': item.status === 'Online', 'pi pi-times-circle': item.status === 'Offline' }"></i>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold">{{ item.nome }}</p>
-                                    <p :class="{ 'text-xs font-medium': true, 'text-green-200': item.status === 'Online', 'text-red-200': item.status === 'Offline' }">
-                                        {{ item.status }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                    </div>
                 </div>
 
-                <div class="col-span-4 flex flex-col gap-8">
-                    <div class="flex items-center gap-3">
-                        <h2 class="text-2xl font-bold text-gray-200">Chamados Recentes</h2>
-                        <span class="text-xl">🔥</span>
+                <div class="col-span-2 flex flex-col gap-6">
+                    <div class="flex justify-between items-end">
+                        <p class="text-gray-400 text-lg">
+                            Última atualização: <span class="font-bold text-white">{{ lastUpdated }}</span>
+                        </p>
                     </div>
 
-                    <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden">
-                        <h3 class="text-lg font-bold text-gray-300 mb-4 p-3">Chamados por Categoria</h3>
-
-                        <div class="w-full h-full flex items-center justify-center">
-                            <Chart type="bar" :data="categoryChartData" :options="chartOptions" class="w-full" />
-                        </div>
-                    </div>
-
-                    <div class="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700 flex-grow">
-                        <h3 class="text-lg font-bold text-gray-300 mb-4">Mensagens Não Lidas</h3>
-                        <div v-if="mensagensNaoLidas.length > 0" class="flex flex-col gap-4 overflow-y-auto max-h-[550px] overflow-y">
-                            <div v-for="msg in mensagensNaoLidas" :key="msg.id" class="p-3 bg-gray-700 rounded-lg">
-                                <p class="text-sm font-semibold text-gray-200">{{ msg.usuario }} no Chamado #{{ msg.chamado.id }}</p>
-                                <p class="text-xs text-gray-400 truncate mt-1">{{ msg.mensagem }}</p>
+                    <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden p-4 flex-grow">
+                        <div ref="chamadosScrollContainer" class="overflow-y-hidden">
+                            <div class="grid gap-4">
+                                <div
+                                    v-for="item in statusSistemas"
+                                    :key="item.nome"
+                                    :class="{ 'p-3 rounded-lg flex items-center gap-3 transition-colors': true, 'bg-green-700': item.status === 'Online', 'bg-red-700 border-2 border-red-400 blink-animation': item.status === 'Offline' }"
+                                >
+                                    <i :class="{ 'text-2xl': true, 'pi pi-check-circle': item.status === 'Online', 'pi pi-times-circle': item.status === 'Offline' }"></i>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-semibold">{{ item.nome }}</p>
+                                        <p :class="{ 'text-xs font-medium': true, 'text-green-200': item.status === 'Online', 'text-red-200': item.status === 'Offline' }">
+                                            {{ item.status }}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div v-else class="text-center text-gray-500 mt-8">
-                            <p>Nenhuma nova mensagem para exibir.</p>
                         </div>
                     </div>
                 </div>
@@ -320,6 +348,42 @@ export default {
     background-color: #1f2937 !important;
     color: #d1d5db !important;
 }
+
+.p-paginator {
+    background-color: #1f2937 !important;
+    border-top: 1px solid #374151 !important;
+    color: #d1d5db !important;
+}
+
+.p-paginator .p-paginator-page,
+.p-paginator .p-paginator-first,
+.p-paginator .p-paginator-prev,
+.p-paginator .p-paginator-next,
+.p-paginator .p-paginator-last {
+    background-color: #1f2937 !important;
+    color: #d1d5db !important;
+    border: none !important;
+    border-radius: 6px !important;
+}
+
+.p-paginator .p-paginator-page:hover,
+.p-paginator .p-paginator-first:hover,
+.p-paginator .p-paginator-prev:hover,
+.p-paginator .p-paginator-next:hover,
+.p-paginator .p-paginator-last:hover {
+    background-color: #374151 !important;
+    color: #60a5fa !important;
+}
+
+.p-paginator .p-paginator-page.p-highlight {
+    background-color: #2563eb !important;
+    color: #fff !important;
+}
+
+.p-datatable-tbody > tr > td {
+    color: #d1d5db !important;
+}
+
 .p-datatable-tbody > tr > td {
     border: none !important;
 }
@@ -363,5 +427,40 @@ export default {
     50% {
         opacity: 0.5;
     }
+}
+
+.p-tag {
+    font-weight: bold;
+    font-size: 0.75rem; /* Menor para caber na tabela */
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    line-height: 1;
+}
+
+.p-tag-danger {
+    background-color: #b91c1c; /* Red 700 */
+    color: #fca5a5; /* Red 300 */
+}
+.p-tag-warning {
+    background-color: #92400e; /* Amber 700 */
+    color: #fcd34d; /* Amber 300 */
+}
+.p-tag-info {
+    background-color: #1d4ed8; /* Blue 700 */
+    color: #93c5fd; /* Blue 300 */
+}
+.p-tag-success {
+    background-color: #065f46; /* Green 700 */
+    color: #a7f3d0; /* Green 300 */
+}
+.p-tag-secondary {
+    background-color: #374151; /* Gray 700 */
+    color: #d1d5db; /* Gray 300 */
+}
+
+.p-paginator .p-dropdown {
+    background-color: #374151 !important;
+    border: 1px solid #4b5563 !important;
+    color: #d1d5db !important;
 }
 </style>

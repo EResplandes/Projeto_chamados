@@ -86,8 +86,8 @@ class DashboardService
 
             // Buscar últimos 15 chamados
             $chamados = ChamadosAdminResource::collection(
-                Chamados::orderBy('created_at', 'desc')
-                    ->limit(5)
+                Chamados::whereIn('status_id', [1, 2])
+                    ->orderBy('created_at', 'desc')
                     ->get()
             );
 
@@ -101,7 +101,7 @@ class DashboardService
             // Buscar mensagens não lidas
             $mensagens_nao_lidas = ChatResource::collection(
                 Chat::where('lida', false)
-                    ->whereNotIn('remetente_id', [1, 2, 3, 4, 5, 6]) 
+                    ->whereNotIn('usuario_id', [1, 2, 3, 4, 5, 6])
                     ->orderBy('created_at', 'desc')
                     ->get()
             );

@@ -45,7 +45,7 @@ export default class ChamadosService {
         const formData = new FormData();
         formData.append('titulo', form?.titulo ?? null);
         formData.append('descricao', form?.descricao ?? null);
-        formData.append('prioridade', form?.urgencia.label ?? null);
+        formData.append('urgencia', form?.urgencia.label ?? null);
         formData.append('categoria_id', form?.categoria.id ?? null);
         formData.append('solicitante_id', id);
         formData.append('anexo', form?.pdf ?? null);
