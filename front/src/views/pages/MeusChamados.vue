@@ -113,8 +113,6 @@ export default {
                 return;
             }
 
-            console.log(this.formChamado);
-
             this.chamadosService.abrirChamado(this.formChamado).then((data) => {
                 if (data.status == 'Chamado registrado com sucesso!') {
                     this.mensagemSucesso(data.status);

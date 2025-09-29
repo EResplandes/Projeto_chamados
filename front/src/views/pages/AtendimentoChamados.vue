@@ -112,7 +112,6 @@ export default {
 
                     return ordem[a.status] - ordem[b.status];
                 });
-                console.log(this.meusChamados);
                 this.carregando = false;
             });
         },
@@ -304,11 +303,11 @@ export default {
                 case 'Alta':
                     return 'danger';
                 case 'Média':
-                    return 'warn';
+                    return 'success';
                 case 'Baixa':
                     return 'info';
                 case 'Critíco':
-                    return 'contrast';
+                    return 'danger';
                 default:
                     return 'info';
             }
@@ -495,6 +494,14 @@ export default {
                             <Tag :value="data.status" :severity="statusColor(data.status)" class="text-xs font-medium" />
                         </template>
                     </Column>
+                    <Column field="prioridade" header="Prioridade" headerClass="font-medium text-gray-600 text-xs uppercase">
+                        <template #body="{ data }">
+                            <div class="flex items-center gap-2">
+                                <Tag :value="data.prioridade" :severity="priorityColor(data.prioridade)" class="text-xs font-medium" />
+                                <i v-if="data.prioridade === 'Alta'" class="pi pi-exclamation-circle text-red-500 text-xs" />
+                            </div>
+                        </template>
+                    </Column>
                     <Column field="dt_abertura" header="Data Abertura" headerClass="font-medium text-gray-600 text-xs uppercase" />
                     <Column field="tecnico" header="Associar Tecnico" headerClass="font-medium text-gray-600 text-xs uppercase">
                         <template #body="{ data }">
@@ -521,17 +528,24 @@ export default {
                     <div v-for="chamado in meusChamados" :key="chamado.id" class="bg-gray-50 rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
                         <div class="flex justify-between items-center mb-2">
                             <h4 class="font-bold text-gray-800">#{{ chamado.id }} - {{ chamado.titulo }}</h4>
-                            <Tag :value="chamado.status" :severity="statusColor(chamado.status)" class="text-xs font-medium" />
+
+                            <div class="flex gap-2">
+                                <Tag :value="chamado.prioridade" :severity="priorityColor(chamado.prioridade)" class="text-xs font-medium" />
+
+                                <Tag :value="chamado.status" :severity="statusColor(chamado.status)" class="text-xs font-medium" />
+                            </div>
                         </div>
-                        <div class="mb-2 bg-gray-300 p-2 rounded">
-                            <p class="text-sm">{{ chamado.descricao }}</p>
+
+                        <div class="mb-2 bg-gray-100 p-2 rounded">
+                            <p class="text-sm text-gray-700">{{ chamado.descricao }}</p>
                         </div>
+
                         <p class="text-sm text-gray-500 mt-2">Solicitante: {{ chamado.solicitante }}</p>
                         <p class="text-sm text-gray-500"><span class="font-weight-bold">Aberto em:</span> {{ chamado.dt_abertura }}</p>
 
                         <div class="flex items-center gap-2 mt-3 justify-end">
-                            <Button @click="visualizarChat(chamado.id)" icon="pi pi-comments" label="Chat" class="p-button-sm" />
-                            <Button v-if="chamado.anexo[0]" @click="visualizarAnexo(chamado.anexo[0])" label="Anexo" icon="pi pi-file" class="p-button-sm p-button-info" />
+                            <Button @click="visualizarChat(chamado.id)" icon="pi pi-comments" label="Chat" class="p-button-sm p-button-secondary" />
+                            <Button v-if="chamado.anexo && chamado.anexo.length > 0" @click="visualizarAnexo(chamado.anexo[0])" label="Anexo" icon="pi pi-file" class="p-button-sm p-button-info" />
                             <Dropdown
                                 placeholder="Selecione o status"
                                 v-model="chamado.status_id"
