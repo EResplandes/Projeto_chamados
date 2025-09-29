@@ -66,13 +66,12 @@ class ChamadosService
         try {
             // 1ª Passo -> Validar os dados recebidos
             $dados = [
-                'titulo' => $request->titulo,
-                'descricao' => $request->descricao,
+                'titulo' =>  strtoupper($request->titulo),
+                'descricao' => strtoupper($request->descricao),
                 'status_id' => 1,
                 'prioridade' => $request->urgencia,
                 'categoria_id' => $request->categoria_id,
                 'solicitante_id' => $request->solicitante_id,
-                'prioridade' => $request->prioridade,
             ];
 
             // 2ª Passo -> Criar o chamado
