@@ -12,7 +12,7 @@ class Chamados extends Model
     protected $fillable = [
         'titulo',
         'descricao',
-        'urgencia',
+        'prioridade',
         'tecnico_id',
         'tecnico_secundario_id',
         'solicitante_id',
